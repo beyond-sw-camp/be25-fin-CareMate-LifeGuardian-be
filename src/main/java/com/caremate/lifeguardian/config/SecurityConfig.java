@@ -56,22 +56,16 @@ public class SecurityConfig {
                                 "/",
                                 "/oauth2/**",                // OAuth2 리다이렉트 경로
                                 "/v3/api-docs/**",           // Swagger용
-                                "/swagger-ui/**"             // Swagger UI용
+                                "/swagger-ui/**",            // Swagger UI용
+                                "/api/v1/sales-users",
+                                "/api/v1/sales-users/*",
+                                "/api/v1/sales-users/*/status",
+                                "/api/v1/sales-users/*/transfer-customers",
+                                "/api/v1/sales-users/pii-secure"
                         ).permitAll()
-
 //                        // 인증 필요
 //                        .requestMatchers(
 //                                "/api/v1/auth/logout/**",    // 로그아웃
-//                                "/api/v1/members/me",        // 프로필 조회 수정
-//                                "/api/v1/members/me/profile",   // 프로필 추가
-//                                "/api/v1/routines/**",       // 루틴 관련
-//                                "/api/v1/cognitive-games/**",// 미니게임
-//                                "/api/v1/open-questions/**", // 질문
-//                                "/api/v1/daily-records/**",  // 기록
-//                                "/api/v1/trophies",          // 트로피
-//                                "/api/v1/notices/**",        // 공지
-//                                "/api/v1/calendar/**",       // 캘린더
-//                                "/api/v1/statistics/**"     // 통계
 //                        ).hasRole("USER")
                         // ROLE_WITHDRAWN 만 복구 로직 접근 가능
                         //.requestMatchers("/api/v1/members/me/recovery").hasRole("WITHDRAWN")
