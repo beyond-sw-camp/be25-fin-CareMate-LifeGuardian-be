@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.caremate.lifeguardian.member.mapper.SalesUserMapper">
+
+    <!-- 
+      useGeneratedKeys="true" keyProperty="id" 설정을 통해 
+      DB가 발급한 AUTO_INCREMENT ID를 엔티티의 id 필드에 즉각 바인딩합니다.
+    -->
+    <insert id="insertSalesUser" parameterType="com.caremate.lifeguardian.member.domain.SalesUser"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sales_user (
+            branch_id,
+            employee_id,
+            password_hash,
+            name,
+            birth_date,
+            email,
+            phone,
+            rank_code,
+            role_code,
+            status_code,
+            login_fail_count,
+            is_temp_password,
+            terms_agreed,
+            joined_at,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{branchId},
+            #{employeeId},
+            #{passwordHash},
+            #{name},
+            #{birthDate},
+            #{email},
+            #{phone},
+            #{rankCode},
+            #{roleCode},
+            #{statusCode},
+            0,
+            #{isTempPassword},
+            #{termsAgreed},
+            #{joinedAt},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <!-- 사번 동기화 업데이트 -->
+    <update id="updateEmployeeId">
+        UPDATE sales_user
+        SET employee_id = #{employeeId},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <!-- 이메일 존재 여부 검증 -->
+    <select id="existsByEmail" parameterType="string" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM sales_user WHERE email = #{email}
+        )
+    </select>
+
+    <!-- 휴대폰 번호 존재 여부 검증 -->
+    <select id="existsByPhone" parameterType="string" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM sales_user WHERE phone = #{phone}
+        )
+    </select>
+
+</mapper>
