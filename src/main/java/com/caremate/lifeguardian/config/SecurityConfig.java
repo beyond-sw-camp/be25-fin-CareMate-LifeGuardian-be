@@ -55,14 +55,25 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 인증 없어도 접근 가능
                         .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/api/v1/login",
+                                "/",
+                                "/oauth2/**",                // OAuth2 리다이렉트 경로
+                                "/v3/api-docs/**",           // Swagger용
+                                "/swagger-ui/**",            // Swagger UI용
                                 "/api/v1/sales-users",
-                                "/api/v1/sales-users/*/status")
-                        .permitAll()
-                        // .requestMatchers("/api/v1/members/me/recovery").hasRole("WITHDRAWN")
+                                "/api/v1/sales-users/*",
+                                "/api/v1/sales-users/*/status",
+                                "/api/v1/sales-users/*/transfer-customers",
+                                "/api/v1/sales-users/pii-secure"
+                        ).permitAll()
+//                        // 인증 필요
+//                        .requestMatchers(
+//                                "/api/v1/auth/logout/**",    // 로그아웃
+//                        ).hasRole("USER")
+                        // ROLE_WITHDRAWN 만 복구 로직 접근 가능
+                        //.requestMatchers("/api/v1/members/me/recovery").hasRole("WITHDRAWN")
                         .anyRequest()
-                        .authenticated()) // JwtFilter는 스프링 시큐리티 내부에서만 사용
+                        .authenticated()
+                ) // JwtFilter는 스프링 시큐리티 내부에서만 사용
                 .addFilterBefore(new JwtFilter(jwtProvider),
                         UsernamePasswordAuthenticationFilter.class);
 
