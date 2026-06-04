@@ -55,5 +55,33 @@
         * 추후 보안 적용 시 해시값 비교로 변경 예정
     - 주소
     -->
+    <select id="findParentCustomer"
+            resultType="com.caremate.lifeguardian.potential.dto.response.ParentCustomerSearchResponse">
+
+        SELECT
+            ic.integrated_customer_id AS integratedCustomerId,
+            ic.name AS name,
+            ic.birth_date AS birthDate,
+            -- 화면에서 선택한 관계 코드(01=부, 02=모)를 그대로 응답에 포함
+            #{request.relationshipCode} AS relationshipCode,
+            -- 관계 코드명을 common_code에서 조회하여 부/모로 내려줌
+            cc.code_name AS relationshipName,
+            ic.phone AS phone,
+            ic.address AS address
+        FROM integrated_customer ic
+        -- relationshipCode의 코드명을 가져오기 위한 메타코드 조인
+        INNER JOIN common_code cc
+            ON cc.group_code = 'RELATIONSHIP'
+            AND cc.code_value = #{request.relationshipCode}
+        WHERE ic.name = #{request.name}
+            AND ic.birth_date = #{request.birthDate}
+            AND ic.gender = #{gender}
+            AND ic.phone = #{request.phone}
+            AND ic.rrn_encrypted = #{request.rrn}
+            AND ic.address = #{request.address}
+
+        LIMIT 1
+
+    </select>
 
 </mapper>

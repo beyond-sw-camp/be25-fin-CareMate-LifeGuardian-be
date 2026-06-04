@@ -64,7 +64,8 @@ public class SecurityConfig {
                                 "/api/v1/sales-users/*/status",
                                 "/api/v1/sales-users/*/transfer-customers",
                                 "/api/v1/sales-users/pii-secure",
-                                "/api/v1/potential-customers"
+                                "/api/v1/potential-customers",
+                                "/api/v1/potential-customers/parent/search"
                         ).permitAll()
 //                        // 인증 필요
 //                        .requestMatchers(
