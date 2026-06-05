@@ -1,12 +1,15 @@
 package com.caremate.lifeguardian.member.service;
 
 import com.caremate.lifeguardian.common.exception.BaseException;
+import com.caremate.lifeguardian.common.exception.RemainingCustomerConflictException;
 import com.caremate.lifeguardian.member.domain.SalesUser;
 import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
+import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
 import com.caremate.lifeguardian.member.dto.response.SalesUserInfo;
 import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
 import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserStatusUpdateResponse;
 import com.caremate.lifeguardian.member.mapper.BranchMapper;
 import com.caremate.lifeguardian.member.mapper.SalesUserMapper;
 import lombok.RequiredArgsConstructor;
@@ -169,8 +172,70 @@ public class SalesUserServiceImpl implements SalesUserService {
                 .build();
     }
 
+    // 특정 영업사원의 계정 상태를 변경하고, 퇴사/정지인 경우 세션을 무효화합니다.
+    @Override
+    @Transactional
+    public SalesUserStatusUpdateResponse changeSalesUserStatus(Long userId, SalesUserStatusUpdateRequest request) {
+        log.info("영업사원 상태 변경 요청 - userId: {}, statusCode: {}", userId, request.getStatusCode());
 
+        // 1. 대상 영업사원 존재 여부 검증
+        SalesUser salesUser = salesUserMapper.findById(userId);
+        if (salesUser == null) {
+            log.warn("상태 변경 실패 - 존재하지 않는 영업사원 ID: {}", userId);
+            throw new BaseException(404, "요청하신 영업사원 정보를 찾을 수 없습니다.");
+        }
 
+        String newStatusCode = request.getStatusCode();
 
+        // 2. 이미 동일한 계정 상태인 경우 중복 변경 차단
+        if (salesUser.getStatusCode().equals(newStatusCode)) {
+            if ("02".equals(newStatusCode)) {
+                log.warn("상태 변경 거부 - 이미 퇴사/정지 처리된 사원입니다. userId: {}", userId);
+                throw new BaseException(400, "이미 퇴사/정지 처리된 영업사원입니다.");
+            } else {
+                log.warn("상태 변경 거부 - 이미 활성화 상태인 사원입니다. userId: {}", userId);
+                throw new BaseException(400, "이미 활성화 상태인 영업사원입니다.");
+            }
+        }
 
+        // 3. 비활성('02') 퇴사 처리 시 잔여 고객 검증
+        if ("02".equals(newStatusCode)) {
+            long remainingCount = salesUserMapper.countRemainingCustomers(userId);
+            if (remainingCount > 0) {
+                log.warn("퇴사 처리 불가 - 잔여 고객 존재: {}명, userId: {}", remainingCount, userId);
+                throw new RemainingCustomerConflictException(remainingCount);
+            }
+        }
+
+        // 3. 도메인 객체 상태 변경 및 DB 동기화
+        salesUser.changeStatus(newStatusCode);
+        salesUserMapper.updateStatus(userId, newStatusCode);
+        log.info("영업사원 계정 상태 업데이트 완료 - userId: {}, statusCode: {}", userId, newStatusCode);
+
+        // 4. 퇴사/정지('02') 상태로 정상 전이 시 즉각 세션 파기
+        if ("02".equals(newStatusCode)) {
+            // TODO: 리프레시 토큰 및 Redis 구현 후 활성화 예정
+            /*
+            // 4-1. DB 내 Refresh Token 만료 처리 (블랙리스트)
+            int invalidatedCount = tokenManagementMapper.blacklistTokensByUserId(userId);
+            log.info("DB Refresh Token 무효화 처리 완료 - 대상 유저 ID: {}, 무효화 건수: {}", userId, invalidatedCount);
+
+            // 4-2. Redis 캐시 내 Refresh Token 삭제
+            String redisKey = RedisKeyGenerator.refreshToken(userId);
+            if (redisService.exists(redisKey)) {
+                redisService.delete(redisKey);
+                log.info("Redis Refresh Token 캐시 파기 완료 - Key: {}", redisKey);
+            }
+            */
+        }
+
+        // 5. 공통 코드 매핑에 맞춰 statusName 제공 (01 -> 활성(ACTIVE), 02 -> 퇴사/정지(RETIRED))
+        String statusName = "01".equals(newStatusCode) ? "활성(ACTIVE)" : "퇴사/정지(RETIRED)";
+
+        return SalesUserStatusUpdateResponse.builder()
+                .id(userId)
+                .statusCode(newStatusCode)
+                .statusName(statusName)
+                .build();
+    }
 }

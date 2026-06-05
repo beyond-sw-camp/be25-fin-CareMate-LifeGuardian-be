@@ -3,8 +3,10 @@ package com.caremate.lifeguardian.member.controller;
 import com.caremate.lifeguardian.common.ApiResponse;
 import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
+import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
 import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
 import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserStatusUpdateResponse;
 import com.caremate.lifeguardian.member.service.SalesUserService;
 import com.caremate.lifeguardian.common.security.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "영업사원 관리 API", description = "관리자(ADMIN) 권한이 필요한 인사 관리용 API입니다.")
@@ -50,5 +53,20 @@ public class SalesUserController {
 
         return ResponseEntity
                 .ok(ApiResponse.success(200, "영업사원 목록 조회에 성공했습니다.", response));
+    }
+
+    @Operation(summary = "영업사원 상태 변경 (인사 관리용)", description = "관리자가 특정 영업사원의 계정 상태를 변경합니다. 비활성('02') 처리 시 잔여 고객 존재 여부를 엄격히 검증합니다.")
+    @PatchMapping("/{userId}/status")
+    public ResponseEntity<ApiResponse<SalesUserStatusUpdateResponse>> changeSalesUserStatus(
+            @PathVariable Long userId,
+            @Validated @RequestBody SalesUserStatusUpdateRequest request) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("영업사원 상태 변경 API 요청 수신 - 대상 userId: {}, statusCode: {}, 요청 관리자 ID: {}", userId, request.getStatusCode(), currentUserId);
+
+        SalesUserStatusUpdateResponse response = salesUserService.changeSalesUserStatus(userId, request);
+        log.info("영업사원 상태 변경 API 처리 성공 - 대상 userId: {}, 요청 관리자 ID: {}", userId, currentUserId);
+
+        return ResponseEntity
+                .ok(ApiResponse.success(200, "계정 상태가 성공적으로 변경되었습니다.", response));
     }
 }
