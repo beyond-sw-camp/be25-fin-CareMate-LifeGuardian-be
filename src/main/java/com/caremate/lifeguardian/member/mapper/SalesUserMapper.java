@@ -29,5 +29,13 @@ public interface SalesUserMapper {
     // 조건에 해당하는 전체 영업사원 데이터 개수 조회
     long countSalesUsers(SalesUserSearchRequest searchRequest);
 
+    // 특정 영업사원을 id로 조회
+    SalesUser findById(@Param("id") Long id);
+
+    // 영업사원의 계정 상태 업데이트
+    int updateStatus(@Param("id") Long id, @Param("statusCode") String statusCode);
+
+    // 영업사원의 잔여 고객(잠재 고객 + 통합 고객) 수의 총합 조회
+    long countRemainingCustomers(@Param("userId") Long userId);
 
 }

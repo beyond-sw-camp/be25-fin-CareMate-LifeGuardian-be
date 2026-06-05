@@ -111,4 +111,28 @@
             </if>
         </where>
     </select>
+
+    <!-- 영업사원 id로 조회 -->
+    <select id="findById" parameterType="long" resultType="com.caremate.lifeguardian.member.domain.SalesUser">
+        SELECT *
+        FROM sales_user
+        WHERE id = #{id}
+    </select>
+
+    <!-- 계정 상태 업데이트 -->
+    <update id="updateStatus">
+        UPDATE sales_user
+        SET status_code = #{statusCode},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <!-- 잔여 고총합 조회 -->
+    <select id="countRemainingCustomers" parameterType="long" resultType="long">
+        SELECT (
+                   (SELECT COUNT(1) FROM potential_customer WHERE sales_user_id = #{userId}) +
+                   (SELECT COUNT(1) FROM integrated_customer WHERE sales_user_id = #{userId})
+        ) AS remaining_customer_count
+    </select>
+
 </mapper>
