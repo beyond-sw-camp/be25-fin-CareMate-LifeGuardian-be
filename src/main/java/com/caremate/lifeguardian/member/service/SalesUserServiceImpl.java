@@ -3,6 +3,9 @@ package com.caremate.lifeguardian.member.service;
 import com.caremate.lifeguardian.common.exception.BaseException;
 import com.caremate.lifeguardian.member.domain.SalesUser;
 import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
+import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
+import com.caremate.lifeguardian.member.dto.response.SalesUserInfo;
+import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
 import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
 import com.caremate.lifeguardian.member.mapper.BranchMapper;
 import com.caremate.lifeguardian.member.mapper.SalesUserMapper;
@@ -14,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -129,4 +133,44 @@ public class SalesUserServiceImpl implements SalesUserService {
 
         return new String(passwordArray);
     }
+
+    // 조건에 부합하는 영업사원 목록 페이징 조회
+    @Override
+    @Transactional(readOnly = true)
+    public SalesUserListResponse getSalesUserList(SalesUserSearchRequest searchRequest) {
+        log.info("영업사원 목록 조회 요청 - keyword: {}, statusCode: {}, page: {}, size: {}",
+                searchRequest.getKeyword(), searchRequest.getStatusCode(), searchRequest.getPage(),
+                searchRequest.getSize());
+
+        // 전체 데이터 개수 카운트
+        long totalElements = salesUserMapper.countSalesUsers(searchRequest);
+
+        // 전체 페이지 수 계산
+        int size = searchRequest.getSafeSize();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+
+        // 데이터가 존재하지 않는 경우 빈 리스트 반환
+        if (totalElements == 0) {
+            return SalesUserListResponse.builder()
+                    .totalElements(0L)
+                    .totalPages(0)
+                    .content(java.util.Collections.emptyList())
+                    .build();
+        }
+
+        // 페이징 데이터 목록 조회
+        List<SalesUserInfo> content = salesUserMapper.selectSalesUserList(searchRequest);
+
+        // 불변 Response DTO 조립 반환
+        return SalesUserListResponse.builder()
+                .totalElements(totalElements)
+                .totalPages(totalPages)
+                .content(content)
+                .build();
+    }
+
+
+
+
+
 }
