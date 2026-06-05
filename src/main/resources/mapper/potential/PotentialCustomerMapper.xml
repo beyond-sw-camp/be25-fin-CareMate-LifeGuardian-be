@@ -84,4 +84,70 @@
 
     </select>
 
+    <!-- 부모 통합고객 존재 여부 확인 -->
+    <select id="existsParentCustomer" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM integrated_customer
+        WHERE integrated_customer_id = #{parentCustomerId}
+    </select>
+
+    <!-- 잠재고객 등록 -->
+    <insert id="insertPotentialCustomer"
+            parameterType="com.caremate.lifeguardian.potential.domain.PotentialCustomer"
+            useGeneratedKeys="true"
+            keyProperty="id">
+
+        INSERT INTO potential_customer (
+            parent_customer_id,
+            sales_user_id,
+            relationship_code,
+            name,
+            gender,
+            birth_date,
+            consult_status_code,
+            conversion_status_code
+        )
+        VALUES (
+            #{parentCustomerId},
+            #{salesUserId},
+            #{relationshipCode},
+            #{name},
+            #{gender},
+            #{birthDate},
+            '01',
+            '01'
+        )
+    </insert>
+
+    <!-- 등록 완료된 잠재고객 단건 조회 -->
+    <select id="findCreatedPotentialCustomer"
+            resultType="com.caremate.lifeguardian.potential.dto.response.PotentialCustomerCreateResponse">
+
+        SELECT
+            pc.id AS potentialCustomerId,
+            pc.parent_customer_id AS parentCustomerId,
+            pc.relationship_code AS relationshipCode,
+            relationship.code_name AS relationshipName,
+            pc.name AS name,
+            pc.gender AS gender,
+            pc.birth_date AS birthDate,
+            pc.consult_status_code AS consultStatusCode,
+            consult.code_name AS consultStatusName,
+            pc.conversion_status_code AS conversionStatusCode,
+            conversion.code_name AS conversionStatusName,
+            pc.created_at AS createdAt
+        FROM potential_customer pc
+        INNER JOIN common_code relationship
+            ON relationship.group_code = 'RELATIONSHIP'
+            AND relationship.code_value = pc.relationship_code
+        INNER JOIN common_code consult
+            ON consult.group_code = 'CONSULT_STATUS'
+            AND consult.code_value = pc.consult_status_code
+        INNER JOIN common_code conversion
+            ON conversion.group_code = 'CONVERSION_STATUS'
+            AND conversion.code_value = pc.conversion_status_code
+        WHERE pc.id = #{potentialCustomerId}
+
+    </select>
+
 </mapper>

@@ -2,7 +2,9 @@ package com.caremate.lifeguardian.potential.controller;
 
 import com.caremate.lifeguardian.common.ApiResponse;
 import com.caremate.lifeguardian.potential.dto.request.ParentCustomerSearchRequest;
+import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerCreateRequest;
 import com.caremate.lifeguardian.potential.dto.response.ParentCustomerSearchResponse;
+import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerCreateResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerListResponse;
 import com.caremate.lifeguardian.potential.service.PotentialCustomerService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -79,6 +81,43 @@ public class PotentialCustomerController {
         return ApiResponse.success(
                 200,
                 "부모 통합고객 정보 조회에 성공했습니다.",
+                response
+        );
+    }
+
+    /**
+     * 잠재고객 등록 API
+     *
+     * 기능:
+     * - 부모 통합고객과 연결된 자녀 잠재고객을 등록한다.
+     *
+     * 처리 흐름:
+     * - 부모 통합고객 존재 여부 확인
+     * - 잠재고객 정보 저장
+     * - 등록 완료된 잠재고객 정보 반환
+     *
+     * 현재는 테스트용으로 salesUserId를 직접 받음
+     * 추후 JWT 로그인 적용 시 SecurityUtil에서 사용자 ID 추출 예정
+     *
+     * @param request 잠재고객 등록 요청 정보
+     * @param salesUSerId 로그인한 영업사원 ID
+     * @return 등록 완료된 잠재고객 정보
+     */
+    @Operation(summary = "잠재고객 등록", description = "부모 통합고객과 연결된 자녀 잠재고객을 등록하는 API입니다.")
+    @PostMapping
+    public ApiResponse<PotentialCustomerCreateResponse> createPotentialCustomer(
+            @Valid @RequestBody PotentialCustomerCreateRequest request,
+            @RequestParam Long salesUSerId
+    ) {
+        PotentialCustomerCreateResponse response =
+                potentialCustomerService.createPotentialCustomer(
+                        request,
+                        salesUSerId
+                );
+
+        return ApiResponse.success(
+                201,
+                "잠재고객 등록에 성공했습니다.",
                 response
         );
     }

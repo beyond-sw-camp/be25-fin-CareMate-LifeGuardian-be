@@ -1,7 +1,9 @@
 package com.caremate.lifeguardian.potential.service;
 
 import com.caremate.lifeguardian.potential.dto.request.ParentCustomerSearchRequest;
+import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerCreateRequest;
 import com.caremate.lifeguardian.potential.dto.response.ParentCustomerSearchResponse;
+import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerCreateResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerListResponse;
 import java.util.List;
 
@@ -23,5 +25,22 @@ public interface PotentialCustomerService {
      */
     ParentCustomerSearchResponse findParentCustomer(
             ParentCustomerSearchRequest request
+    );
+
+    /**
+     * 잠재고객 등록
+     *
+     * 처리 흐름:
+     * - 부모 통합고객 존재 여부 확인
+     * - 잠재고객 정보 저장
+     * - 저장 완료 잠재고객 정보 반환
+     *
+     * @param request 잠재고객 등록 요청 정보
+     * @param salesUserId 로그인한 영업사원 ID
+     * @return 등록 완료된 잠재고객 정보
+     */
+    PotentialCustomerCreateResponse createPotentialCustomer(
+            PotentialCustomerCreateRequest request,
+            Long salesUserId
     );
 }

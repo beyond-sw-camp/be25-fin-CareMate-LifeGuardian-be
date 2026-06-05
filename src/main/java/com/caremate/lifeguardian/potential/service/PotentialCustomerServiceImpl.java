@@ -1,8 +1,11 @@
 package com.caremate.lifeguardian.potential.service;
 
 import com.caremate.lifeguardian.common.exception.BaseException;
+import com.caremate.lifeguardian.potential.domain.PotentialCustomer;
 import com.caremate.lifeguardian.potential.dto.request.ParentCustomerSearchRequest;
+import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerCreateRequest;
 import com.caremate.lifeguardian.potential.dto.response.ParentCustomerSearchResponse;
+import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerCreateResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerListResponse;
 import com.caremate.lifeguardian.potential.mapper.PotentialCustomerMapper;
 import lombok.RequiredArgsConstructor;
@@ -70,5 +73,51 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
             case "02" -> "FEMALE";
             default -> throw new BaseException(400, "부모와의 관계 코드가 올바르지 않습니다.");
         };
+    }
+
+    /**
+     * 잠재고객 등록 실제 구현
+     *
+     * 처리 흐름:
+     * - 부모 통합고객 ID가 실제 존재하는지 확인한다.
+     * - 요청값과 로그인 영업사원 ID를 기반으로 PotentialCustomer 객체를 만든다.
+     * - 잠재고객을 등록한다.
+     * - 등록된 잠재고객 ID로 다시 조회하여 응답 데이터를 반환한다.
+     */
+    @Override
+    @Transactional
+    public PotentialCustomerCreateResponse createPotentialCustomer(
+            PotentialCustomerCreateRequest request,
+            Long salesUserId
+    ) {
+        // 1. 부모 통합고객 존재 여부 확인
+        boolean existsParent =
+                potentialCustomerMapper.existsParentCustomer(request.getParentCustomerId());
+
+        if (!existsParent) {
+            throw new BaseException(404, "부모 통합고객 정보를 찾을 수 없습니다.");
+        }
+
+        // 2. 잠재고객 등록용 domain 객체 생성
+        PotentialCustomer potentialCustomer = new PotentialCustomer();
+        potentialCustomer.setParentCustomerId(request.getParentCustomerId());
+        potentialCustomer.setSalesUserId(salesUserId);
+        potentialCustomer.setRelationshipCode(request.getRelationshipCode());
+        potentialCustomer.setName(request.getName());
+        potentialCustomer.setGender(request.getGender());
+        potentialCustomer.setBirthDate(request.getBirthDate());
+
+        // 3.잠재고객 등록
+        int insertedCount =
+                potentialCustomerMapper.insertPotentialCustomer(potentialCustomer);
+
+        if (insertedCount != 1) {
+             throw new BaseException(500, "시스템 오류로 인해 잠재고객을 등록하지 못했습니다. 관리자에게 문의하세요.");
+        }
+
+        // 4. 등록 완료된 잠재고객 단건 조회 후 반환
+        return potentialCustomerMapper.findCreatedPotentialCustomer(
+                potentialCustomer.getId()
+        );
     }
 }
