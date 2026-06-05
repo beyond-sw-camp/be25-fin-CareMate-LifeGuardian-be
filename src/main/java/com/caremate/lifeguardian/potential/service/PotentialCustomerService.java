@@ -4,6 +4,7 @@ import com.caremate.lifeguardian.potential.dto.request.ParentCustomerSearchReque
 import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerCreateRequest;
 import com.caremate.lifeguardian.potential.dto.response.ParentCustomerSearchResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerCreateResponse;
+import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerDeleteResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerListResponse;
 import java.util.List;
 
@@ -41,6 +42,18 @@ public interface PotentialCustomerService {
      */
     PotentialCustomerCreateResponse createPotentialCustomer(
             PotentialCustomerCreateRequest request,
+            Long salesUserId
+    );
+
+    /**
+     * 잠재고객 삭제
+     *
+     * @param potentialCustomerId 삭제할 잠재고객 ID
+     * @param salesUserId 로그인한 영업사원 ID
+     * @return 삭제 결과
+     */
+    PotentialCustomerDeleteResponse deletePotentialCustomer(
+            Long potentialCustomerId,
             Long salesUserId
     );
 }

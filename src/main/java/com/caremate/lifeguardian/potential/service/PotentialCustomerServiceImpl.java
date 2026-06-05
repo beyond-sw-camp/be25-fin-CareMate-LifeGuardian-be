@@ -6,12 +6,16 @@ import com.caremate.lifeguardian.potential.dto.request.ParentCustomerSearchReque
 import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerCreateRequest;
 import com.caremate.lifeguardian.potential.dto.response.ParentCustomerSearchResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerCreateResponse;
+import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerDeleteResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerListResponse;
 import com.caremate.lifeguardian.potential.mapper.PotentialCustomerMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -19,6 +23,7 @@ import java.util.List;
 public class PotentialCustomerServiceImpl implements PotentialCustomerService {
 
     private final PotentialCustomerMapper potentialCustomerMapper;
+    private final ObjectMapper objectMapper;
 
     /** 잠재고객 목록 조회 실제 구현
      *
@@ -119,5 +124,77 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
         return potentialCustomerMapper.findCreatedPotentialCustomer(
                 potentialCustomer.getId()
         );
+    }
+
+    /**
+     * 잠재고객 삭제 실제 구현
+     *
+     * 처리 흐름:
+     * - 삭제할 잠재고객이 존재하는지 확인한다.
+     * - 로그인한 영업사원의 담당 잠재고객인지 확인한다.
+     * - 삭제 전 잠재고객 정보를 JSON 스냅샷으로 생성한다.
+     * - potential_customer_lifecycle_log에 삭제 이력을 저장한다.
+     * - 잠재고객을 삭제한다.
+     * - 삭제된 잠재고객 ID와 삭제 시간을 반환한다.
+     */
+    @Override
+    @Transactional
+    public PotentialCustomerDeleteResponse deletePotentialCustomer(
+            Long potentialCustomerId,
+            Long salesUserId
+    ) {
+        // 1. 삭제 대상 잠재고객 존재 여부 확인
+        PotentialCustomer potentialCustomer =
+                potentialCustomerMapper.findPotentialCustomerById(potentialCustomerId);
+
+        if (potentialCustomer == null) {
+            throw new BaseException(404, "해당 잠재고객 정보를 찾을 수 없습니다.");
+        }
+
+        // 2. 로그인한 영업사원의 담당 고객인지 확인
+        boolean hasPermission =
+                potentialCustomerMapper.existsPotentialCustomerByIdAndSalesUserId(
+                        potentialCustomerId,
+                        salesUserId
+                );
+
+        if (!hasPermission) {
+            throw new BaseException(403, "해당 잠재고객을 삭제할 권한이 없습니다.");
+        }
+
+        // 3. 삭제 전 잠재고객 정보를 JSON 스냅샷으로 변환
+        String snapshotData;
+
+        try {
+            snapshotData = objectMapper.writeValueAsString(potentialCustomer);
+        } catch (JsonProcessingException e) {
+            throw new BaseException(500, "시스템 오류로 인해 잠재고객 삭제 로그 생성에 실패했습니다. 관리자에게 문의하세요.");
+        }
+
+        // 4. 라이프사이클 로그 저장
+        int logInsertedCount =
+                potentialCustomerMapper.insertPotentialCustomerLifecycleLog(
+                        potentialCustomer,
+                        "03",  // PC_ACTION: 03 = 단순삭제
+                        snapshotData
+                );
+
+        if (logInsertedCount != 1) {
+            throw new BaseException(500, "시스템 오류로 인해 잠재고객 삭제 로그 저장에 실패했습니다. 관리자에게 문의하세요.");
+        }
+
+        // 5. 잠재고객 삭제
+        int deletedCount =
+                potentialCustomerMapper.deletePotentialCustomer(potentialCustomerId);
+
+        if (deletedCount != 1) {
+            throw new BaseException(500, "시스템 오류로 인해 잠재고객 삭제에 실패했습니다. 관리자에게 문의하세요.");
+        }
+
+        // 6. 삭제 결과 반환
+        return PotentialCustomerDeleteResponse.builder()
+                .potentialCustomerId(potentialCustomerId)
+                .deletedAt(LocalDateTime.now())
+                .build();
     }
 }

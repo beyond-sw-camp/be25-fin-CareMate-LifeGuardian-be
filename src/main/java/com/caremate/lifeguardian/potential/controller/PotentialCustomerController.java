@@ -5,6 +5,7 @@ import com.caremate.lifeguardian.potential.dto.request.ParentCustomerSearchReque
 import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerCreateRequest;
 import com.caremate.lifeguardian.potential.dto.response.ParentCustomerSearchResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerCreateResponse;
+import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerDeleteResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerListResponse;
 import com.caremate.lifeguardian.potential.service.PotentialCustomerService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -118,6 +119,46 @@ public class PotentialCustomerController {
         return ApiResponse.success(
                 201,
                 "잠재고객 등록에 성공했습니다.",
+                response
+        );
+    }
+
+    /**
+     * 잠재고객 삭제 API
+     *
+     * 기능:
+     * - 잠재고객 정보를 삭제한다.
+     * - 삭제 전 라이프사이클 로그를 저장한다.
+     *
+     * 처리 흐름:
+     * - 삭제 대상 존재 여부 확인
+     * - 담당 영업사원 권한 확인
+     * - lifecycle_log 저장
+     * - 잠재고객 삭제
+     *
+     * 현재는 테스트용으로 salesUserId를 직접 받음
+     * 추후 JWT 로그인 적용 시 SecurityUtil에서 사용자 ID 추출 예정
+     *
+     * @param potentialCustomerId 삭제할 잠재고객 ID
+     * @param salesUserId 로그인한 영업사원 ID
+     * @return 삭제 결과
+     */
+    @Operation(summary = "잠재고객 삭제", description = "잠재고객을 삭제하고 라이프사이클 로그를 저장하는 API입니다.")
+    @DeleteMapping("/{potentialCustomerId}")
+    public ApiResponse<PotentialCustomerDeleteResponse> deletePotentialCustomer(
+            @PathVariable Long potentialCustomerId,
+            @RequestParam Long salesUserId
+    ) {
+
+        PotentialCustomerDeleteResponse response =
+                potentialCustomerService.deletePotentialCustomer(
+                        potentialCustomerId,
+                        salesUserId
+                );
+
+        return ApiResponse.success(
+                200,
+                "잠재고객 삭제에 성공했습니다.",
                 response
         );
     }

@@ -150,4 +150,67 @@
 
     </select>
 
+    <!-- 삭제 대상 잠재고객 단건 조회 -->
+    <select id="findPotentialCustomerById"
+            resultType="com.caremate.lifeguardian.potential.domain.PotentialCustomer">
+
+        SELECT
+            id,
+            parent_customer_id AS parentCustomerId,
+            sales_user_id AS salesUserId,
+            relationship_code AS relationshipCode,
+            name,
+            gender,
+            birth_date AS birthDate,
+            consult_status_code AS consultStatusCode,
+            conversion_status_code AS conversionStatusCode,
+            created_at AS createdAt,
+            insurance_age_shift_date AS insuranceAgeShiftDate,
+            webform_received_at AS webformReceivedAt,
+            updated_at AS updatedAt
+        FROM potential_customer
+        WHERE id = #{potentialCustomerId}
+
+    </select>
+
+    <!-- 로그인한 영업사원의 잠재고객인지 확인 -->
+    <select id="existsPotentialCustomerByIdAndSalesUserId"
+            resultType="boolean">
+
+        SELECT COUNT(*) > 0
+        FROM potential_customer
+        WHERE id = #{potentialCustomerId}
+            AND sales_user_id = #{salesUserId}
+
+    </select>
+
+    <!-- 잠재고객 라이프사이클 로그 저장 -->
+    <insert id="insertPotentialCustomerLifecycleLog">
+
+        INSERT INTO potential_customer_lifecycle_log (
+            potential_customer_id,
+            parent_customer_id,
+            sales_user_id,
+            action_type_code,
+            snapshot_data
+        )
+        VALUES (
+            #{potentialCustomer.id},
+            #{potentialCustomer.parentCustomerId},
+            #{potentialCustomer.salesUserId},
+            #{actionTypeCode},
+            #{snapshotData}
+        )
+
+    </insert>
+
+    <!-- 잠재고객 삭제 -->
+    <delete id="deletePotentialCustomer">
+
+        DELETE
+        FROM potential_customer
+        WHERE id = #{potentialCustomerId}
+
+    </delete>
+
 </mapper>

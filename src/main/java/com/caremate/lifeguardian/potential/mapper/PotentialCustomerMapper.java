@@ -38,4 +38,27 @@ public interface PotentialCustomerMapper {
     PotentialCustomerCreateResponse findCreatedPotentialCustomer(
             @Param("potentialCustomerId") Long potentialCustomerId
     );
+
+    // 삭제 대상 잠재고객 조회
+    PotentialCustomer findPotentialCustomerById(
+            @Param("potentialCustomerId") Long potentialCustomerId
+    );
+
+    // 삭제 권한 확인
+    boolean existsPotentialCustomerByIdAndSalesUserId(
+            @Param("potentialCustomerId") Long potentialCustomerId,
+            @Param("salesUserId") Long salesUserId
+    );
+
+    // 잠재고객 라이프사이클 로그 저장
+    int insertPotentialCustomerLifecycleLog(
+            @Param("potentialCustomer") PotentialCustomer potentialCustomer,
+            @Param("actionTypeCode") String actionTypeCode,
+            @Param("snapshotData") String snapshotData
+    );
+
+    // 잠재고객 삭제
+    int deletePotentialCustomer(
+            @Param("potentialCustomerId") Long potentialCustomerId
+    );
 }
