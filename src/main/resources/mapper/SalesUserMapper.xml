@@ -135,4 +135,14 @@
         ) AS remaining_customer_count
     </select>
 
+    <!-- 원본 PII 데이터 마스킹 (보안 격리) -->
+    <update id="secureOriginalPii">
+        UPDATE sales_user
+        SET phone = #{phone},
+            email = #{email},
+            birth_date = #{birthDate},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
 </mapper>

@@ -57,6 +57,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/api/v1/sales-users",
+                                "/api/v1/sales-users/*",
                                 "/api/v1/sales-users/*/status",
                                 "/oauth2/**",                   // OAuth2 리다이렉트 경로
                                 "/v3/api-docs/**",              // Swagger용
