@@ -38,4 +38,11 @@ public interface SalesUserMapper {
     // 영업사원의 잔여 고객(잠재 고객 + 통합 고객) 수의 총합 조회
     long countRemainingCustomers(@Param("userId") Long userId);
 
+    // 원본 sales_user 테이블의 개인정보 데이터를 마스킹된 데이터로 덮어씌움
+    int secureOriginalPii(
+            @Param("id") Long id,
+            @Param("phone") String phone,
+            @Param("email") String email,
+            @Param("birthDate") java.time.LocalDate birthDate);
+
 }

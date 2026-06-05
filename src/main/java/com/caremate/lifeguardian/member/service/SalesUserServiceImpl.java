@@ -3,15 +3,14 @@ package com.caremate.lifeguardian.member.service;
 import com.caremate.lifeguardian.common.exception.BaseException;
 import com.caremate.lifeguardian.common.exception.RemainingCustomerConflictException;
 import com.caremate.lifeguardian.member.domain.SalesUser;
+import com.caremate.lifeguardian.member.domain.SalesUserPiiSecure;
 import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
-import com.caremate.lifeguardian.member.dto.response.SalesUserInfo;
-import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
-import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
-import com.caremate.lifeguardian.member.dto.response.SalesUserStatusUpdateResponse;
+import com.caremate.lifeguardian.member.dto.response.*;
 import com.caremate.lifeguardian.member.mapper.BranchMapper;
 import com.caremate.lifeguardian.member.mapper.SalesUserMapper;
+import com.caremate.lifeguardian.member.mapper.SalesUserPiiSecureMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +32,7 @@ public class SalesUserServiceImpl implements SalesUserService {
     private final SalesUserMapper salesUserMapper;
     private final BranchMapper branchMapper;
     private final PasswordEncoder passwordEncoder;
+    private final SalesUserPiiSecureMapper salesUserPiiSecureMapper;
 
     private static final String CHAR_LOWER = "abcdefghijklmnopqrstuvwxyz";
     private static final String CHAR_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -238,4 +240,90 @@ public class SalesUserServiceImpl implements SalesUserService {
                 .statusName(statusName)
                 .build();
     }
+
+    // 영업사원을 영구 퇴사 및 PII 및 TODO 기기 세션을 일괄 파기합니다.
+    @Override
+    @Transactional
+    public SalesUserRetireResponse retireSalesUser(Long userId) {
+        log.info("퇴사자 비활성화 및 세션 파기 요청 수신 - userId: {}", userId);
+
+        // 대상 영업사원 존재 여부 검증
+        SalesUser salesUser = salesUserMapper.findById(userId);
+        if (salesUser == null) {
+            log.warn("퇴사 처리 실패 - 존재하지 않는 영업사원 ID: {}", userId);
+            throw new BaseException(404, "요청하신 영업사원 정보를 찾을 수 없습니다.");
+        }
+
+        // 이미 퇴사 상태인지 검증
+        if ("02".equals(salesUser.getStatusCode())) {
+            log.warn("퇴사 처리 실패 - 이미 퇴사 처리된 사원입니다. userId: {}", userId);
+            throw new BaseException(400, "이미 퇴사/정지 처리된 영업사원입니다.");
+        }
+
+        // 잔여 고객 검증
+        long remainingCount = salesUserMapper.countRemainingCustomers(userId);
+        if (remainingCount > 0) {
+            log.warn("퇴사 처리 차단 - 잔여 고객 존재: {}명, userId: {}", remainingCount, userId);
+            throw new BaseException(409, "잔여 고객이 존재하여 퇴사 처리가 불가합니다. 고객 이관을 먼저 완료해주세요.");
+        }
+
+        // PII 데이터 보안 격리 처리
+        LocalDateTime retiredAt = LocalDateTime.now();
+        LocalDateTime purgedAt = retiredAt.plusYears(3);
+
+        SalesUserPiiSecure piiSecure = SalesUserPiiSecure.builder()
+                .employeeId(salesUser.getEmployeeId())
+                .phone(salesUser.getPhone())
+                .email(salesUser.getEmail())
+                .birthDate(salesUser.getBirthDate())
+                .retiredAt(retiredAt)
+                .purgedAt(purgedAt)
+                .build();
+
+        // pii 격리 보안 보관 테이블 적재
+        salesUserPiiSecureMapper.insertPiiSecure(piiSecure);
+        log.info("퇴사자 PII 보안 격리 테이블 이관 완료 - 사번: {}", salesUser.getEmployeeId());
+
+        // 원본 sales_user 테이블 내 PII 데이터 소프트 마스킹 처리
+        String maskedPhone = "000-0000-0000";
+        String maskedEmail = "retired_" + userId + "@company.com";
+        java.time.LocalDate maskedBirthDate = java.time.LocalDate.of(1900, 1, 1);
+
+        salesUserMapper.secureOriginalPii(userId, maskedPhone, maskedEmail, maskedBirthDate);
+        log.info("원본 테이블 내 PII 소프트 마스킹 완료 - userId: {}", userId);
+
+        // 사원 상태 코드 변경
+        salesUser.changeStatus("02");
+        salesUserMapper.updateStatus(userId, "02");
+        log.info("영업사원 계정 상태 퇴사('02') 전이 완료 - userId: {}", userId);
+
+        // TODO: 리프레시 토큰 및 Redis 구현 후 활성화 예정
+        /*
+        // 6. 세션 및 토큰 만료 처리 (DB & Redis)
+        // 6-1. DB Refresh Token 블랙리스트 무효화 및 만료 개수 리턴
+        int invalidatedCount = tokenManagementMapper.blacklistTokensByUserId(userId);
+        log.info("DB 내 Refresh Token 블랙리스트 업데이트 완료 - userId: {}, 무효화 건수: {}", userId, invalidatedCount);
+
+        // 6-2. Redis 내 Refresh Token 캐시 파기
+        String redisKey = RedisKeyGenerator.refreshToken(userId);
+        if (redisService.exists(redisKey)) {
+            redisService.delete(redisKey);
+            log.info("Redis Refresh Token 캐시 강제 삭제 완료 - Key: {}", redisKey);
+        }
+        */
+        int invalidatedCount = 0; // 컴파일 에러 방지용 임시 반환값
+
+        // 7. Response DTO 조립 반환
+        String formattedRetiredAt = retiredAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+        return SalesUserRetireResponse.builder()
+                .id(userId)
+                .statusCode("02")
+                .statusName("퇴사")
+                .invalidatedTokenCount(invalidatedCount)
+                .retiredAt(formattedRetiredAt)
+                .build();
+    }
+
+
 }

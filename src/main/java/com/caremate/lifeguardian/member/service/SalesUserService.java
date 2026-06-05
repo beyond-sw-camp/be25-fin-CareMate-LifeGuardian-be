@@ -5,6 +5,7 @@ import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
 import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
 import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserRetireResponse;
 import com.caremate.lifeguardian.member.dto.response.SalesUserStatusUpdateResponse;
 
 public interface SalesUserService {
@@ -16,5 +17,8 @@ public interface SalesUserService {
 
     // 특정 영업사원의 계정 상태 변경, TODO 퇴사/정지인 경우 세션 무효화
     SalesUserStatusUpdateResponse changeSalesUserStatus(Long userId, SalesUserStatusUpdateRequest request);
+
+    // 영업사원을 영구 퇴사 및 PII 및 TODO 기기 세션을 일괄 파기합니다.
+    SalesUserRetireResponse retireSalesUser(Long userId);
 
 }

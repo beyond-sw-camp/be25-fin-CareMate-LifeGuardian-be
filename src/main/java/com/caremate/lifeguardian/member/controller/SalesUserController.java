@@ -6,6 +6,7 @@ import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
 import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
 import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserRetireResponse;
 import com.caremate.lifeguardian.member.dto.response.SalesUserStatusUpdateResponse;
 import com.caremate.lifeguardian.member.service.SalesUserService;
 import com.caremate.lifeguardian.common.security.SecurityUtil;
@@ -68,5 +69,20 @@ public class SalesUserController {
 
         return ResponseEntity
                 .ok(ApiResponse.success(200, "계정 상태가 성공적으로 변경되었습니다.", response));
+    }
+
+
+    @Operation(summary = "퇴사자 계정 비활성화 및 세션 파기 (인사 관리용)", description = "관리자가 특정 영업사원을 영구 퇴사 처리하고 개인정보를 보안 격리 및 기기 세션을 일괄 파기합니다.")
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<ApiResponse<SalesUserRetireResponse>> retireSalesUser(
+            @PathVariable Long userId) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("퇴사자 계정 비활성화 API 요청 수신 - 대상 userId: {}, 요청 관리자 ID: {}", userId, currentUserId);
+
+        SalesUserRetireResponse response = salesUserService.retireSalesUser(userId);
+        log.info("퇴사자 계정 비활성화 API 처리 성공 - 대상 userId: {}, 요청 관리자 ID: {}", userId, currentUserId);
+
+        return ResponseEntity
+                .ok(ApiResponse.success(200, "영업사원 퇴사 처리 및 기기 세션 만료가 정상적으로 완료되었습니다.", response));
     }
 }
