@@ -2,6 +2,8 @@ package com.caremate.lifeguardian.member.controller;
 
 import com.caremate.lifeguardian.common.ApiResponse;
 import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
+import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
+import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
 import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
 import com.caremate.lifeguardian.member.service.SalesUserService;
 import com.caremate.lifeguardian.common.security.SecurityUtil;
@@ -12,10 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "영업사원 관리 API", description = "관리자(ADMIN) 권한이 필요한 인사 관리용 API입니다.")
 @Slf4j
@@ -38,5 +37,18 @@ public class SalesUserController {
         return ResponseEntity
                 .status(HttpStatus.CREATED) // 201 Created
                 .body(ApiResponse.success(201, "신입 영업사원 등록이 완료되었습니다.", response));
+    }
+
+    @Operation(summary = "영업사원 목록 조회 (인사 관리용)", description = "관리자가 영업사원 목록을 키워드 검색 및 상태 필터링을 지원하여 페이징 조회합니다.")
+    @GetMapping
+    public ResponseEntity<ApiResponse<SalesUserListResponse>> getSalesUserList(
+            @ModelAttribute SalesUserSearchRequest request) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("영업사원 목록 조회 API 요청 수신 - 요청 관리자 ID: {}", currentUserId);
+        SalesUserListResponse response = salesUserService.getSalesUserList(request);
+        log.info("영업사원 목록 조회 API 처리 성공 - 조회 건수: {}, 요청 관리자 ID: {}", response.getContent().size(), currentUserId);
+
+        return ResponseEntity
+                .ok(ApiResponse.success(200, "영업사원 목록 조회에 성공했습니다.", response));
     }
 }
