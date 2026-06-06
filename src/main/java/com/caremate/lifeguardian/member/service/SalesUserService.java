@@ -1,0 +1,24 @@
+package com.caremate.lifeguardian.member.service;
+
+import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
+import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
+import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
+import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserRetireResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserStatusUpdateResponse;
+
+public interface SalesUserService {
+    // 신입 영업사원을 등록 자동사번 생성 및 임시 비밀번호 반환
+    SalesUserRegisterResponse registerSalesUser(SalesUserRegisterRequest request);
+
+    // 조건에 부합하는 영업사원 목록 페이징하여 조회
+    SalesUserListResponse getSalesUserList(SalesUserSearchRequest searchRequest);
+
+    // 특정 영업사원의 계정 상태 변경, TODO 퇴사/정지인 경우 세션 무효화
+    SalesUserStatusUpdateResponse changeSalesUserStatus(Long userId, SalesUserStatusUpdateRequest request);
+
+    // 영업사원을 영구 퇴사 및 PII 및 TODO 기기 세션을 일괄 파기합니다.
+    SalesUserRetireResponse retireSalesUser(Long userId);
+
+}

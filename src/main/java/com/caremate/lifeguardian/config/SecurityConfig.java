@@ -32,7 +32,6 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
         http
                 // 1. CSRF 비활성화 (JWT를 사용하는 무상태성 API이므로 필수)
                 .csrf(AbstractHttpConfigurer::disable)
@@ -46,21 +45,10 @@ public class SecurityConfig {
                 )
                 // 4. 인증/인가: 인증되지 않은 사용자가 접근했을 때 401과 함께 메시지 전달
                 .exceptionHandling(exception -> exception
-                        // 인증 실패 (401)
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write(
-                                    "{\"code\":401,\"message\":\"로그인이 필요한 서비스입니다.\",\"data\":null}"
-                            );
-                        })
-                        // 권한 부족 (403)
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write(
-                                    "{\"code\":403,\"message\":\"접근 권한이 없습니다.\",\"data\":null}"
-                            );
+                            response.getWriter().write("{\"code\": 401, \"message\": \"로그인이 필요한 서비스입니다.\"}");
                         })
                 )
                 // 5. 경로별 권한 제어
@@ -68,29 +56,36 @@ public class SecurityConfig {
                         // 인증 없어도 접근 가능
                         .requestMatchers(
                                 "/",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/reissue",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/api/v1/sales-users",
+                                "/api/v1/sales-users/*",
+                                "/api/v1/sales-users/*/status",
+                                "/oauth2/**",                   // OAuth2 리다이렉트 경로
+                                "/v3/api-docs/**",              // Swagger용
+                                "/swagger-ui/**"                // Swagger UI용
                         ).permitAll()
-                        // 나머지 요청은 인증 필요
-                        .anyRequest().authenticated()
-                )
-                // JWT 인증 필터 등록
-                .addFilterBefore(
-                        new JwtFilter(jwtProvider),
-                        UsernamePasswordAuthenticationFilter.class
-                );
+
+//                        // 인증 필요
+//                        .requestMatchers(
+//                                "/api/v1/auth/logout/**",    // 로그아웃
+//                                "/api/v1/members/me",        // 프로필 조회 수정
+//                                "/api/v1/members/me/profile",   // 프로필 추가
+//                                "/api/v1/routines/**",       // 루틴 관련
+//                                "/api/v1/cognitive-games/**",// 미니게임
+//                                "/api/v1/open-questions/**", // 질문
+//                                "/api/v1/daily-records/**",  // 기록
+//                                "/api/v1/trophies",          // 트로피
+//                                "/api/v1/notices/**",        // 공지
+//                                "/api/v1/calendar/**",       // 캘린더
+//                                "/api/v1/statistics/**"     // 통계
+//                        ).hasRole("USER")
+                        // ROLE_WITHDRAWN 만 복구 로직 접근 가능
+                        //.requestMatchers("/api/v1/members/me/recovery").hasRole("WITHDRAWN")
+                        .anyRequest()
+                        .authenticated()
+                ) // JwtFilter는 스프링 시큐리티 내부에서만 사용
+                .addFilterBefore(new JwtFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-    /**
-     * BCrypt 비밀번호 암호화 Bean
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 
     @Bean
@@ -107,5 +102,10 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
