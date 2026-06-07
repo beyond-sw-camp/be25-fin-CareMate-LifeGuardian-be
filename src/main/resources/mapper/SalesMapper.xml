@@ -1,28 +1,437 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
-  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.caremate.lifeguardian.sales.mapper.SalesMapper">
 
-    <select id="getSalesSummary" resultType="com.caremate.lifeguardian.sales.dto.response.SalesSummaryResponseDto">
-        SELECT
-            CAST(SUBSTRING(s.target_year_month, 1, 4) AS UNSIGNED) AS year,
-           CAST(SUBSTRING(s.target_year_month, 5, 2) AS UNSIGNED) AS month,
-            s.target_contract_count AS targetCount,
-            COUNT(c.id) AS contractCount,
-            case
-                when s.target_contract_count IS NULL OR s.target_contract_count = 0 THEN 0
-                ELSE ROUND(count(c.contract_result_code) / s.target_contract_count * 100, 1)
-                END AS achievementRate
+    <select id="getSalesSummary" resultType="SalesKPI">
+        SELECT CAST(SUBSTRING(s.target_year_month, 1, 4) AS UNSIGNED) AS year,
+               CAST(SUBSTRING(s.target_year_month, 5, 2) AS UNSIGNED) AS month,
+               s.target_contract_count  AS targetCount,
+               COUNT(c.id) AS contractCount,
+               case
+                   when s.target_contract_count IS NULL OR s.target_contract_count = 0 THEN 0
+                   ELSE ROUND(count(c. contract_result_status_code) / s.target_contract_count * 100, 1)
+                   END AS achievementRate
         FROM sales_monthly_target s
-        LEFT JOIN contract c
-            ON s.sales_user_id = c.sales_user_id
-            AND c.contract_result_code = '02'
+                 LEFT JOIN contract c
+                           ON s.sales_user_id = c.sales_user_id
+                               AND c. contract_result_status_code = '02'
         WHERE s.sales_user_id = #{id}
-            AND s.target_year_month = #{targetYearMonth}
-        GROUP BY
-            s.target_year_month,
-            s.target_contract_count;
+          AND s.target_year_month = #{targetYearMonth}
+        GROUP BY s.target_year_month,
+                 s.target_contract_count;
+    </select>
+
+    <select id="countSalesList"
+            parameterType="com.caremate.lifeguardian.sales.dto.request.SalesSearchRequestDto"
+            resultType="long">
+        WITH customer_base AS (
+            SELECT
+                pc.id AS customer_id,
+                '01' AS customer_type_code,
+                pc.name AS customer_name,
+                pc.gender,
+                pc.birth_date
+            FROM potential_customer pc
+            WHERE pc.conversion_status_code = '01'
+              AND pc.sales_user_id = #{salesUserId}
+
+            UNION ALL
+
+            SELECT
+                ic.integrated_customer_id AS customer_id,
+                '02' AS customer_type_code,
+                ic.name AS customer_name,
+                ic.gender,
+                ic.birth_date
+            FROM integrated_customer ic
+            WHERE ic.sales_user_id = #{salesUserId}
+        )
+        SELECT COUNT(*)
+        FROM customer_base cb
+        WHERE 1 = 1
+
+        <if test="customerName != null and customerName != ''">
+            AND cb.customer_name LIKE CONCAT('%', #{customerName}, '%')
+        </if>
+
+        <if test="age != null">
+            AND TIMESTAMPDIFF(YEAR, cb.birth_date, CURDATE()) = #{age}
+        </if>
+
+        <if test="gender != null and gender != ''">
+            AND cb.gender = #{gender}
+        </if>
+
+        <if test="contractStatusCodes != null and contractStatusCodes.size() > 0">
+            AND (
+                SELECT c.contract_status_code
+                FROM contract c
+                WHERE c.insured_id = cb.customer_id
+                ORDER BY
+                    CASE c.contract_result_status_code
+                        WHEN '01' THEN 1
+                        WHEN '02' THEN 2
+                        WHEN '03' THEN 3
+                        ELSE 9
+                    END,
+                    c.updated_at DESC,
+                    c.id DESC
+                LIMIT 1
+            ) IN
+            <foreach collection="contractStatusCodes"
+                     item="code"
+                     open="("
+                     separator=","
+                     close=")">
+                #{code}
+            </foreach>
+        </if>
+
+        <if test="hasReport != null and hasReport == true">
+            AND EXISTS (
+                SELECT 1
+                FROM customer_report cr
+                WHERE cr.conversion_status_code = cb.customer_type_code
+                  AND cr.customer_id = cb.customer_id
+            )
+        </if>
+
+        <if test="hasReport != null and hasReport == false">
+            AND NOT EXISTS (
+                SELECT 1
+                FROM customer_report cr
+                WHERE cr.conversion_status_code = cb.customer_type_code
+                  AND cr.customer_id = cb.customer_id
+            )
+        </if>
+
+        <if test="hasThreeStep != null and hasThreeStep == true">
+            AND EXISTS (
+                SELECT 1
+                FROM daily_action_item dai
+                WHERE dai.conversion_status_code = cb.customer_type_code
+                  AND dai.customer_id = cb.customer_id
+                  AND dai.is_completed = FALSE
+                  AND dai.trigger_type_code IN ('06', '07', '08')
+            )
+        </if>
+
+        <if test="hasThreeStep != null and hasThreeStep == false">
+            AND NOT EXISTS (
+                SELECT 1
+                FROM daily_action_item dai
+                WHERE dai.conversion_status_code = cb.customer_type_code
+                  AND dai.customer_id = cb.customer_id
+                  AND dai.is_completed = FALSE
+                  AND dai.trigger_type_code IN ('06', '07', '08')
+            )
+        </if>
+    </select>
+
+    <select id="getSalesList"
+            parameterType="com.caremate.lifeguardian.sales.dto.request.SalesSearchRequestDto"
+            resultType="SalesList">
+
+        WITH customer_base AS (
+            SELECT
+                pc.id AS customer_id,
+                '01' AS customer_type_code,
+                pc.name AS customer_name,
+                pc.gender,
+                pc.birth_date,
+                pc.sales_user_id,
+                pc.consult_status_code,
+                pc.insurance_age_shift_date,
+                pc.created_at
+        FROM potential_customer pc
+        WHERE pc.conversion_status_code = '01'
+            AND pc.sales_user_id = #{salesUserId}
+
+        UNION ALL
+
+        SELECT
+            ic.integrated_customer_id AS customer_id,
+            '02' AS customer_type_code,
+            ic.name AS customer_name,
+            ic.gender,
+            ic.birth_date,
+            ic.sales_user_id,
+            NULL AS consult_status_code,
+            ic.insurance_age_shift_date,
+            ic.created_at
+            FROM integrated_customer ic
+            WHERE ic.sales_user_id = #{salesUserId}
+        ),
+
+        representative_contract AS (
+        SELECT *
+            FROM (
+                SELECT
+                    c.*,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY c.insured_id
+                            ORDER BY
+                                CASE c.contract_result_status_code
+                                    WHEN '01' THEN 1
+                                    WHEN '02' THEN 2
+                                    WHEN '03' THEN 3
+                                 ELSE 9
+                            END,
+                            c.updated_at DESC,
+                            c.id DESC
+                        ) AS rn
+        FROM contract c
+        INNER JOIN customer_base cb
+        ON cb.customer_id = c.insured_id
+        ) x
+        WHERE x.rn = 1
+        ),
+
+        latest_webform AS (
+        SELECT *
+        FROM (
+        SELECT
+        wr.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY wr.conversion_status_code, wr.customer_id
+        ORDER BY
+        wr.received_at DESC,
+        wr.id DESC
+        ) AS rn
+        FROM webform_response wr
+        INNER JOIN customer_base cb
+        ON cb.customer_type_code = wr.conversion_status_code
+        AND cb.customer_id = wr.customer_id
+        ) x
+        WHERE x.rn = 1
+        ),
+
+        latest_report AS (
+        SELECT *
+        FROM (
+        SELECT
+        cr.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY cr.conversion_status_code, cr.customer_id
+        ORDER BY
+        cr.created_at DESC,
+        cr.id DESC
+        ) AS rn
+        FROM customer_report cr
+        INNER JOIN customer_base cb
+        ON cb.customer_type_code = cr.conversion_status_code
+        AND cb.customer_id = cr.customer_id
+        ) x
+        WHERE x.rn = 1
+        ),
+
+        representative_three_step AS (
+        SELECT *
+        FROM (
+        SELECT
+        dai.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY dai.conversion_status_code, dai.customer_id
+        ORDER BY
+        dai.target_date ASC,
+        dai.id DESC
+        ) AS rn
+        FROM daily_action_item dai
+        INNER JOIN customer_base cb
+        ON cb.customer_type_code = dai.conversion_status_code
+        AND cb.customer_id = dai.customer_id
+        WHERE dai.is_completed = FALSE
+        AND dai.trigger_type_code IN ('06', '07', '08')
+        ) x
+        WHERE x.rn = 1
+        ),
+
+        customer_enriched AS (
+        SELECT
+            cb.*,
+
+            rc.id AS contract_id,
+            rc.contract_status_code,
+            rc.contract_result_status_code,
+            rc.insurance_product_id,
+            rc.insured_id,
+
+            lw.id AS webform_id,
+            lw.received_at AS webform_received_at,
+
+            lr.id AS report_id,
+            lr.send_status_code,
+
+            rts.trigger_type_code AS three_step_code,
+            rts.target_date AS three_step_target_date
+
+        FROM customer_base cb
+            LEFT JOIN representative_contract rc ON rc.insured_id = cb.customer_id
+            LEFT JOIN latest_webform lw
+                ON lw.conversion_status_code = cb.customer_type_code AND lw.customer_id = cb.customer_id
+            LEFT JOIN latest_report lr
+                ON lr.conversion_status_code = cb.customer_type_code AND lr.customer_id = cb.customer_id
+            LEFT JOIN representative_three_step rts
+                ON rts.conversion_status_code = cb.customer_type_code AND rts.customer_id = cb.customer_id
+        ),
+
+        customer_page AS (
+        SELECT
+            ce.*,
+            DATEDIFF(ce.insurance_age_shift_date, CURDATE()) AS age_increase_d_day,
+
+        CASE
+            WHEN DATEDIFF(ce.insurance_age_shift_date, CURDATE()) BETWEEN 0 AND 30 THEN 1
+            WHEN ce.three_step_code IS NOT NULL THEN 2
+            WHEN ce.webform_id IS NOT NULL THEN 3
+            ELSE 9
+        END AS sort_rank
+
+        FROM customer_enriched ce
+        WHERE 1 = 1
+
+        <if test="customerName != null and customerName != ''">
+            AND ce.customer_name LIKE CONCAT('%', #{customerName}, '%')
+        </if>
+
+        <if test="age != null">
+            AND TIMESTAMPDIFF(YEAR, ce.birth_date, CURDATE()) = #{age}
+        </if>
+
+        <if test="gender != null and gender != ''">
+            AND ce.gender = #{gender}
+        </if>
+
+        <if test="contractStatusCodes != null and contractStatusCodes.size() > 0">
+            AND ce.contract_status_code IN
+            <foreach collection="contractStatusCodes"
+                     item="code"
+                     open="("
+                     separator=","
+                     close=")">
+                #{code}
+            </foreach>
+        </if>
+
+        <if test="hasReport != null and hasReport == true">
+            AND ce.report_id IS NOT NULL
+        </if>
+
+        <if test="hasReport != null and hasReport == false">
+            AND ce.report_id IS NULL
+        </if>
+
+        <if test="hasThreeStep != null and hasThreeStep == true">
+            AND ce.three_step_code IS NOT NULL
+        </if>
+
+        <if test="hasThreeStep != null and hasThreeStep == false">
+            AND ce.three_step_code IS NULL
+        </if>
+
+        ORDER BY
+            sort_rank ASC,
+            age_increase_d_day ASC,
+            ce.three_step_target_date ASC,
+            ce.created_at DESC
+
+        LIMIT #{size}
+        OFFSET #{offset}
+        )
+
+        SELECT
+            cp.customer_id AS customerId,
+            cp.customer_name AS customerName,
+            cp.gender AS gender,
+            TIMESTAMPDIFF(YEAR, cp.birth_date, CURDATE()) AS age,
+            cp.birth_date AS birthDate,
+
+        cp.customer_type_code AS customerStageCode,
+
+        CASE cp.customer_type_code
+            WHEN '01' THEN '잠재 고객'
+            WHEN '02' THEN '통합 고객'
+        END AS customerStageName,
+
+        cp.insurance_age_shift_date AS insuranceAgeShiftDate,
+        cp.age_increase_d_day AS ageIncreaseDDay,
+
+        cp.three_step_code AS threeStepCode,
+        COALESCE(trigger_code.code_name, '-') AS threeStepName,
+
+        cp.consult_status_code AS consultStatusCode,
+        COALESCE(consult_code.code_name, '-') AS consultStatusName,
+
+        cp.contract_id AS contractId,
+        cp.contract_status_code AS contractStatusCode,
+        COALESCE(contract_code.code_name, '미상담') AS contractStatusName,
+
+        COALESCE(ip.product_name, '-') AS insuranceName,
+
+        COALESCE(
+        CASE
+            WHEN cp.customer_type_code = '01' THEN pc_insured.name
+            WHEN cp.customer_type_code = '02' THEN ic_insured.name
+        END,
+        cp.customer_name) AS insuredName,
+
+        CASE
+            WHEN cp.webform_id IS NULL THEN '-'
+            ELSE DATE_FORMAT(cp.webform_received_at, '%Y/%m/%d')
+        END AS webformReceivedAt,
+
+        cp.report_id AS reportId,
+
+        CASE
+            WHEN cp.report_id IS NULL THEN FALSE
+            ELSE TRUE
+        END AS hasReport,
+
+        cp.send_status_code AS reportStatusCode,
+
+        CASE
+            WHEN cp.report_id IS NULL THEN '미발송'
+            ELSE COALESCE(send_code.code_name, '미발송')
+        END AS reportStatusName,
+
+        CASE
+            WHEN cp.report_id IS NULL OR cp.send_status_code != '02' THEN TRUE
+            ELSE FALSE
+        END AS canSendReport,
+
+        cp.sort_rank AS sortRank
+
+        FROM customer_page cp
+
+        LEFT JOIN potential_customer pc_insured
+            ON cp.customer_type_code = '01' AND pc_insured.id = cp.insured_id
+
+        LEFT JOIN integrated_customer ic_insured
+            ON cp.customer_type_code = '02' AND ic_insured.integrated_customer_id = cp.insured_id
+
+        LEFT JOIN insurance_product ip
+            ON cp.insurance_product_id = ip.id
+
+        LEFT JOIN common_code trigger_code
+            ON trigger_code.group_code = 'TRIGGER_TYPE' AND trigger_code.code_value = cp.three_step_code
+
+        LEFT JOIN common_code consult_code
+            ON consult_code.group_code = 'CONSULT_STATUS' AND consult_code.code_value = cp.consult_status_code
+
+        LEFT JOIN common_code contract_code
+            ON contract_code.group_code = 'CONTRACT_STATUS' AND contract_code.code_value = cp.contract_status_code
+
+        LEFT JOIN common_code send_code
+            ON send_code.group_code = 'SEND_STATUS' AND send_code.code_value = cp.send_status_code
+
+        ORDER BY
+        cp.sort_rank ASC,
+        cp.age_increase_d_day ASC,
+        cp.three_step_target_date ASC,
+        cp.created_at DESC
+
     </select>
 
 </mapper>

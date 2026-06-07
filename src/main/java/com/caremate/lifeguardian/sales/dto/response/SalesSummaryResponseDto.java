@@ -6,11 +6,13 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.type.Alias;
 
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Alias("SalesKPI")
 public class SalesSummaryResponseDto {
 
     private Integer year;
