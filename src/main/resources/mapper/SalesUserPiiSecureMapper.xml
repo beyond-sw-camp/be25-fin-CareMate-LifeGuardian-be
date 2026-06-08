@@ -23,5 +23,23 @@
         )
     </insert>
 
+    <!-- 퇴사자 PII 보관 총 건수 조회 -->
+    <select id="countPiiSecure" resultType="long">
+        SELECT COUNT(1) FROM sales_user_pii_secure
+    </select>
+
+    <!-- 퇴사자 PII 보관 목록 페이징 조회 -->
+    <select id="selectPiiSecureList" resultType="com.caremate.lifeguardian.member.domain.SalesUserPiiSecure">
+        SELECT
+            employee_id AS employeeId,
+            phone,
+            email,
+            birth_date AS birthDate,
+            retired_at AS retiredAt,
+            purged_at AS purgedAt
+        FROM sales_user_pii_secure
+        ORDER BY retired_at DESC
+            LIMIT #{size} OFFSET #{offset}
+    </select>
 
 </mapper>
