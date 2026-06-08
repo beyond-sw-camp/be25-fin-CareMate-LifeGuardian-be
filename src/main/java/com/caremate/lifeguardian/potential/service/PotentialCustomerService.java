@@ -25,7 +25,8 @@ public interface PotentialCustomerService {
      * @return 부모 통합고객 정보
      */
     ParentCustomerSearchResponse findParentCustomer(
-            ParentCustomerSearchRequest request
+            ParentCustomerSearchRequest request,
+            Long salesUserId
     );
 
     /**

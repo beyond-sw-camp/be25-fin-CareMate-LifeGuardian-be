@@ -53,7 +53,7 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
 
     @Override
     @Transactional(readOnly = true)
-    public ParentCustomerSearchResponse findParentCustomer(ParentCustomerSearchRequest request) {
+    public ParentCustomerSearchResponse findParentCustomer(ParentCustomerSearchRequest request, Long salesUserId) {
 
         String gender = convertRelationshipCodeToGender(request.getRelationshipCode());
 
@@ -62,7 +62,7 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
         String hashedRrn = rrnHashUtil.hash(request.getRrn());
 
         ParentCustomerSearchResponse response =
-                potentialCustomerMapper.findParentCustomer(request, gender, hashedRrn);
+                potentialCustomerMapper.findParentCustomer(request, gender, hashedRrn, salesUserId);
 
         if (response == null) {
             throw new BaseException(404, "일치하는 부모 통합고객 정보를 찾을 수 없습니다.");

@@ -79,6 +79,7 @@
             AND ic.phone = #{request.phone}
             AND ic.rrn_encrypted = #{hashedRrn}
             AND ic.address = #{request.address}
+            AND ic.sales_user_id = #{salesUserId}
 
         LIMIT 1
 

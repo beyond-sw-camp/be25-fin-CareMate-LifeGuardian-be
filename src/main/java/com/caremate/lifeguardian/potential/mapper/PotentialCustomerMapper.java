@@ -23,7 +23,8 @@ public interface PotentialCustomerMapper {
     ParentCustomerSearchResponse findParentCustomer(
             @Param("request") ParentCustomerSearchRequest request,
             @Param("gender") String gender,
-            @Param("hashedRrn") String hashedRrn
+            @Param("hashedRrn") String hashedRrn,
+            @Param("salesUserId") Long salesUserId
     );
 
     // 부모 통합고객 존재 여부 확인(잠재고객 등록 전 parentCustomerId가 실제 존재하는지 검증)
