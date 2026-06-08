@@ -1,12 +1,10 @@
 package com.caremate.lifeguardian.member.service;
 
+import com.caremate.lifeguardian.member.dto.request.SalesUserCustomerTransferRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
-import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
-import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
-import com.caremate.lifeguardian.member.dto.response.SalesUserRetireResponse;
-import com.caremate.lifeguardian.member.dto.response.SalesUserStatusUpdateResponse;
+import com.caremate.lifeguardian.member.dto.response.*;
 
 public interface SalesUserService {
     // 신입 영업사원을 등록 자동사번 생성 및 임시 비밀번호 반환
@@ -20,5 +18,8 @@ public interface SalesUserService {
 
     // 영업사원을 영구 퇴사 및 PII 및 TODO 기기 세션을 일괄 파기합니다.
     SalesUserRetireResponse retireSalesUser(Long userId);
+
+    // 퇴사 예정자의 모든 잔여 고객을 다른 활성 영업사원에게 일괄 이관 및 이력 기록
+    SalesUserCustomerTransferResponse transferCustomers(Long userId, SalesUserCustomerTransferRequest request, Long changedByUserId);
 
 }
