@@ -6,6 +6,7 @@ import com.caremate.lifeguardian.sales.mapper.SalesMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +19,7 @@ public class SalesServiceImpl implements SalesService {
     - 404, 500 예외처리
      */
     @Override
+    @Transactional(readOnly = true)
     public SalesSummaryResponseDto getSalesSummary(Long currentUserId, String targetYearMonth) {
         validateSalesSummaryRequest(targetYearMonth);
 
