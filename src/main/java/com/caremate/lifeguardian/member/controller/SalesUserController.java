@@ -1,10 +1,7 @@
 package com.caremate.lifeguardian.member.controller;
 
 import com.caremate.lifeguardian.common.ApiResponse;
-import com.caremate.lifeguardian.member.dto.request.SalesUserCustomerTransferRequest;
-import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
-import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
-import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
+import com.caremate.lifeguardian.member.dto.request.*;
 import com.caremate.lifeguardian.member.dto.response.*;
 import com.caremate.lifeguardian.member.service.SalesUserService;
 import com.caremate.lifeguardian.common.security.SecurityUtil;
@@ -99,6 +96,21 @@ public class SalesUserController {
 
         return ResponseEntity
                 .ok(ApiResponse.success(200, message, response));
+    }
+
+
+    @Operation(summary = "퇴사자 PII 분리 보관 현황 조회 (인사 관리용)", description = "관리자 대시보드에서 분리 보관 중인 퇴사자 PII 보존 현황 및 남은 파기 일수를 조회합니다.")
+    @GetMapping("/pii-secure")
+    public ResponseEntity<ApiResponse<SalesUserPiiSecureListResponse>> getPiiSecureList(
+            @ModelAttribute SalesUserPiiSecureSearchRequest request) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("퇴사자 PII 분리 보관 현황 조회 API 요청 수신 - 요청 관리자 ID: {}", currentUserId);
+
+        SalesUserPiiSecureListResponse response = salesUserService.getPiiSecureList(request);
+        log.info("퇴사자 PII 분리 보관 현황 조회 API 처리 성공 - 건수: {}, 요청 관리자 ID: {}", response.getContent().size(), currentUserId);
+
+        return ResponseEntity
+                .ok(ApiResponse.success(200, "퇴사자 PII 분리 보관 현황 조회가 완료되었습니다.", response));
     }
 
 }
