@@ -1,6 +1,7 @@
 package com.caremate.lifeguardian.potential.service;
 
 import com.caremate.lifeguardian.common.exception.BaseException;
+import com.caremate.lifeguardian.common.security.RrnHashUtil;
 import com.caremate.lifeguardian.potential.domain.PotentialCustomer;
 import com.caremate.lifeguardian.potential.dto.request.ParentCustomerSearchRequest;
 import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerCreateRequest;
@@ -24,6 +25,7 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
 
     private final PotentialCustomerMapper potentialCustomerMapper;
     private final ObjectMapper objectMapper;
+    private final RrnHashUtil rrnHashUtil;
 
     /** 잠재고객 목록 조회 실제 구현
      *
@@ -55,8 +57,12 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
 
         String gender = convertRelationshipCodeToGender(request.getRelationshipCode());
 
+        // 주민번호 입력값을 식별키로 정규화 후 해시 처리
+        // 예: 830411-1****** 또는 8304111 -> 8304111 -> SHA-256 + pepper
+        String hashedRrn = rrnHashUtil.hash(request.getRrn());
+
         ParentCustomerSearchResponse response =
-                potentialCustomerMapper.findParentCustomer(request, gender);
+                potentialCustomerMapper.findParentCustomer(request, gender, hashedRrn);
 
         if (response == null) {
             throw new BaseException(404, "일치하는 부모 통합고객 정보를 찾을 수 없습니다.");

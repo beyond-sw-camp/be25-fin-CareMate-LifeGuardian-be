@@ -77,7 +77,7 @@
             AND ic.birth_date = #{request.birthDate}
             AND ic.gender = #{gender}
             AND ic.phone = #{request.phone}
-            AND ic.rrn_encrypted = #{request.rrn}
+            AND ic.rrn_encrypted = #{hashedRrn}
             AND ic.address = #{request.address}
 
         LIMIT 1

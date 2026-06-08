@@ -49,10 +49,16 @@ public class ParentCustomerSearchRequest {
     private String phone;
 
     /**
-     * 부모 주민등록번호
+     * 부모 주민등록번호 식별값
      *
-     * 현재 개발 단계에서는 입력값을 그대로 integrated_customer.rrn_encrypted와 비교
-     * 추후 보안 적용 시 해시 처리 후 비교하도록 변경
+     * 입력 예:
+     * 830411-1******
+     *
+     * 처리 방식:
+     * - 하이픈(-) 제거
+     * - * 제거
+     * - 8304111 형태로 정규화
+     * - SHA-256 해시 처리 후 ,integrated_customer.rrn_encrypted와 비교
      */
     @NotBlank(message = "주민등록번호는 필수입니다.")
     private String rrn;
