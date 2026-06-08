@@ -45,4 +45,21 @@ public interface SalesUserMapper {
             @Param("email") String email,
             @Param("birthDate") java.time.LocalDate birthDate);
 
+    // 이관 이력 벌크 기록
+    int insertCustomerAssignmentHistory(
+            @Param("fromUserId") Long fromUserId,
+            @Param("toUserId") Long toUserId,
+            @Param("changedByUserId") Long changedByUserId,
+            @Param("reason") String reason);
+
+    // 잠재고객 소유권 일괄 변경
+    int updatePotentialCustomersUserId(
+            @Param("fromUserId") Long fromUserId,
+            @Param("toUserId") Long toUserId);
+
+    // 통합고객 소유권 일괄 변경
+    int updateIntegratedCustomersUserId(
+            @Param("fromUserId") Long fromUserId,
+            @Param("toUserId") Long toUserId);
+
 }

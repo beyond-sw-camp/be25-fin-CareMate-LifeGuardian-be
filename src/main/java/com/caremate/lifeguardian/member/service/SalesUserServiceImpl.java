@@ -4,6 +4,7 @@ import com.caremate.lifeguardian.common.exception.BaseException;
 import com.caremate.lifeguardian.common.exception.RemainingCustomerConflictException;
 import com.caremate.lifeguardian.member.domain.SalesUser;
 import com.caremate.lifeguardian.member.domain.SalesUserPiiSecure;
+import com.caremate.lifeguardian.member.dto.request.SalesUserCustomerTransferRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
@@ -322,6 +323,61 @@ public class SalesUserServiceImpl implements SalesUserService {
                 .statusName("퇴사")
                 .invalidatedTokenCount(invalidatedCount)
                 .retiredAt(formattedRetiredAt)
+                .build();
+    }
+
+    // 퇴사 예정자의 모든 잔여 고객을 다른 활성 영업사원에게 일괄 이관 및 이력 기록
+    @Override
+    @Transactional
+    public SalesUserCustomerTransferResponse transferCustomers(Long userId, SalesUserCustomerTransferRequest request,
+                                                               Long changedByUserId) {
+        Long toUserId = request.getToUserId();
+        log.info("퇴사자 고객 일괄 이관 시작 - fromUserId: {}, toUserId: {}, 실행자 ID: {}", userId, toUserId, changedByUserId);
+
+        // 1. 기존 영업사원 존재 여부 검증
+        SalesUser fromUser = salesUserMapper.findById(userId);
+        if (fromUser == null) {
+            log.warn("이관 실패 - 존재하지 않는 기존 영업사원 ID: {}", userId);
+            throw new BaseException(404, "요청하신 영업사원 정보를 찾을 수 없습니다.");
+        }
+
+        // 2. 새 담당 영업사원 존재 및 활성 상태 검증
+        SalesUser toUser = salesUserMapper.findById(toUserId);
+        if (toUser == null || !"01".equals(toUser.getStatusCode())) {
+            log.warn("이관 실패 - 새 담당자를 찾을 수 없거나 활성 상태가 아님. toUserId: {}", toUserId);
+            throw new BaseException(404, "고객을 인계받을 대상 영업사원을 찾을 수 없거나 이미 퇴사한 계정입니다.");
+        }
+
+        // 3. 기존 담당자와 새 담당자가 동일한지 검증
+        if (userId.equals(toUserId)) {
+            log.warn("이관 실패 - 기존 담당자와 새 담당자가 동일함. userId: {}", userId);
+            throw new BaseException(400, "잘못된 요청입니다. 기존 담당자와 새 담당자가 동일할 수 없습니다.");
+        }
+
+        // 4. 기존 담당자의 잔여 고객 수 검증
+        long remainingCustomers = salesUserMapper.countRemainingCustomers(userId);
+        if (remainingCustomers == 0) {
+            log.warn("이관 실패 - 배정된 잔여 고객이 없음. userId: {}", userId);
+            throw new BaseException(409, "해당 영업사원에게 배정된 잔여 고객이 없습니다.");
+        }
+
+        // 5. 이관 이력 기록
+        salesUserMapper.insertCustomerAssignmentHistory(userId, toUserId, changedByUserId, "퇴사자 고객 DB 이관");
+        log.info("고객 이관 이력 저장 완료 - fromUserId: {}, toUserId: {}", userId, toUserId);
+
+        // 6. 잠재 고객 소유권 일괄 변경
+        int transferredPotentialCount = salesUserMapper.updatePotentialCustomersUserId(userId, toUserId);
+        log.info("잠재 고객 소유권 변경 완료 - 건수: {}", transferredPotentialCount);
+
+        // 7. 통합 고객 소유권 일괄 변경
+        int transferredIntegratedCount = salesUserMapper.updateIntegratedCustomersUserId(userId, toUserId);
+        log.info("통합 고객 소유권 변경 완료 - 건수: {}", transferredIntegratedCount);
+
+        return SalesUserCustomerTransferResponse.builder()
+                .fromUserId(userId)
+                .toUserId(toUserId)
+                .transferredPotentialCount(transferredPotentialCount)
+                .transferredIntegratedCount(transferredIntegratedCount)
                 .build();
     }
 
