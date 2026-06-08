@@ -1,9 +1,6 @@
 package com.caremate.lifeguardian.member.service;
 
-import com.caremate.lifeguardian.member.dto.request.SalesUserCustomerTransferRequest;
-import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
-import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
-import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
+import com.caremate.lifeguardian.member.dto.request.*;
 import com.caremate.lifeguardian.member.dto.response.*;
 
 public interface SalesUserService {
@@ -21,5 +18,8 @@ public interface SalesUserService {
 
     // 퇴사 예정자의 모든 잔여 고객을 다른 활성 영업사원에게 일괄 이관 및 이력 기록
     SalesUserCustomerTransferResponse transferCustomers(Long userId, SalesUserCustomerTransferRequest request, Long changedByUserId);
+
+    // 분리 보관 중인 퇴사자 PII 보존 현황 페이징 조회
+    SalesUserPiiSecureListResponse getPiiSecureList(SalesUserPiiSecureSearchRequest request);
 
 }

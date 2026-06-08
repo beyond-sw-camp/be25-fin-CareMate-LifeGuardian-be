@@ -4,10 +4,7 @@ import com.caremate.lifeguardian.common.exception.BaseException;
 import com.caremate.lifeguardian.common.exception.RemainingCustomerConflictException;
 import com.caremate.lifeguardian.member.domain.SalesUser;
 import com.caremate.lifeguardian.member.domain.SalesUserPiiSecure;
-import com.caremate.lifeguardian.member.dto.request.SalesUserCustomerTransferRequest;
-import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
-import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
-import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
+import com.caremate.lifeguardian.member.dto.request.*;
 import com.caremate.lifeguardian.member.dto.response.*;
 import com.caremate.lifeguardian.member.mapper.BranchMapper;
 import com.caremate.lifeguardian.member.mapper.SalesUserMapper;
@@ -20,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -382,4 +380,47 @@ public class SalesUserServiceImpl implements SalesUserService {
     }
 
 
+    // 분리 보관 중인 퇴사자 PII 보존 현황 페이징 조회
+    @Override
+    @Transactional(readOnly = true)
+    public SalesUserPiiSecureListResponse getPiiSecureList(SalesUserPiiSecureSearchRequest request) {
+        log.info("퇴사자 PII 분리 보관 현황 조회 - page: {}, size: {}", request.getPage(), request.getSize());
+
+        long totalElements = salesUserPiiSecureMapper.countPiiSecure();
+        int size = request.getSafeSize();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+
+        if (totalElements == 0) {
+            return SalesUserPiiSecureListResponse.builder()
+                    .totalElements(0L)
+                    .totalPages(0)
+                    .content(java.util.Collections.emptyList())
+                    .build();
+        }
+
+        List<SalesUserPiiSecure> list = salesUserPiiSecureMapper.selectPiiSecureList(request.getOffset(), size);
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate today = LocalDate.now();
+
+        List<SalesUserPiiSecureInfo> content = list.stream().map(pii -> {
+            String retiredDateStr = pii.getRetiredAt().format(dateFormatter);
+            String purgedDateStr = pii.getPurgedAt().format(dateFormatter);
+            long remainingDays = java.time.temporal.ChronoUnit.DAYS.between(today, pii.getPurgedAt().toLocalDate());
+
+            return SalesUserPiiSecureInfo.builder()
+                    .employeeId(pii.getEmployeeId())
+                    .retiredAt(retiredDateStr)
+                    .purgedAt(purgedDateStr)
+                    .remainingDays(remainingDays)
+                    .statusName("보관중")
+                    .build();
+        }).collect(java.util.stream.Collectors.toList());
+
+        return SalesUserPiiSecureListResponse.builder()
+                .totalElements(totalElements)
+                .totalPages(totalPages)
+                .content(content)
+                .build();
+    }
 }
