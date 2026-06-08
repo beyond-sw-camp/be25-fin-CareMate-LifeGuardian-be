@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.caremate.lifeguardian.sales.mapper.SalesMapper">
+
+    <select id="getSalesSummary" resultType="com.caremate.lifeguardian.sales.dto.response.SalesSummaryResponseDto">
+        SELECT
+            CAST(SUBSTRING(s.target_year_month, 1, 4) AS UNSIGNED) AS year,
+           CAST(SUBSTRING(s.target_year_month, 5, 2) AS UNSIGNED) AS month,
+            s.target_contract_count AS targetCount,
+            COUNT(c.id) AS contractCount,
+            case
+                when s.target_contract_count IS NULL OR s.target_contract_count = 0 THEN 0
+                ELSE ROUND(count(c.contract_result_code) / s.target_contract_count * 100, 1)
+                END AS achievementRate
+        FROM sales_monthly_target s
+        LEFT JOIN contract c
+            ON s.sales_user_id = c.sales_user_id
+            AND c.contract_result_code = '02'
+        WHERE s.sales_user_id = #{id}
+            AND s.target_year_month = #{targetYearMonth}
+        GROUP BY
+            s.target_year_month,
+            s.target_contract_count;
+    </select>
+
+</mapper>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.caremate.lifeguardian.member.mapper.SalesUserPiiSecureMapper">
+
+    <!-- 퇴사자 개인식별정보 보안 테이블 격리 이관 -->
+    <insert id="insertPiiSecure" parameterType="com.caremate.lifeguardian.member.domain.SalesUserPiiSecure">
+        INSERT INTO sales_user_pii_secure (
+            employee_id,
+            phone,
+            email,
+            birth_date,
+            retired_at,
+            purged_at
+        ) VALUES (
+            #{employeeId},
+            #{phone},
+            #{email},
+            #{birthDate},
+            #{retiredAt},
+            #{purgedAt}
+        )
+    </insert>
+
+    <!-- 퇴사자 PII 보관 총 건수 조회 -->
+    <select id="countPiiSecure" resultType="long">
+        SELECT COUNT(1) FROM sales_user_pii_secure
+    </select>
+
+    <!-- 퇴사자 PII 보관 목록 페이징 조회 -->
+    <select id="selectPiiSecureList" resultType="com.caremate.lifeguardian.member.domain.SalesUserPiiSecure">
+        SELECT
+            employee_id AS employeeId,
+            phone,
+            email,
+            birth_date AS birthDate,
+            retired_at AS retiredAt,
+            purged_at AS purgedAt
+        FROM sales_user_pii_secure
+        ORDER BY retired_at DESC
+            LIMIT #{size} OFFSET #{offset}
+    </select>
+
+</mapper>

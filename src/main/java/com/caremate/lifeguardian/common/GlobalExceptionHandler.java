@@ -3,6 +3,7 @@ package com.caremate.lifeguardian.common;
 import com.caremate.lifeguardian.common.exception.AuthException;
 import com.caremate.lifeguardian.common.exception.BaseException;
 import com.caremate.lifeguardian.common.exception.ErrorResponse;
+import com.caremate.lifeguardian.common.exception.RemainingCustomerConflictException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -17,6 +18,15 @@ import java.util.List;
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(RemainingCustomerConflictException.class)
+    public ResponseEntity<ApiResponse<java.util.Map<String, Long>>> handleRemainingCustomerConflictException(RemainingCustomerConflictException e) {
+        log.warn("잔여 고객 존재로 퇴사 차단 예외 발생: {}", e.getMessage());
+        java.util.Map<String, Long> data = java.util.Map.of("remainingCustomerCount", e.getRemainingCustomerCount());
+        return ResponseEntity
+                .status(409)
+                .body(ApiResponse.fail(409, e.getMessage(), data));
+    }
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<ApiResponse<Void>> handleBaseException(BaseException e) {
