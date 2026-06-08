@@ -2,8 +2,11 @@ package com.caremate.lifeguardian.common.security;
 
 import com.caremate.lifeguardian.common.exception.AuthException;
 import com.caremate.lifeguardian.member.domain.enums.Role;
-import com.caremate.lifeguardian.member.domain.enums.Status;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -37,20 +40,14 @@ public class JwtProvider {
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
-    /**
-     * 메타데이터 정책(USER_ROLE, USER_STATUS 등)을 반영한 AccessToken 생성
-     */
-    public String createAccessToken(Long memberId, Role role, Status status) {
+    // 사용자의 ID와 권한 정보를 담은 단기 Access Token 생성
+    public String createAccessToken(Long memberId, Role role) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + accessTokenExpiration);
 
         return Jwts.builder()
                 .subject(memberId.toString())
-                // 메타테이블의 USER_ROLE (01: ADMIN, 02: SALES) 매핑
                 .claim("role", role.name())
-                .claim("status", status.name())
-                // 필요시 메타테이블의 직급(USER_RANK)이나 상태(USER_STATUS) 추가 가능
-                // .claim("status", "01") // 예: 01(활성)
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(key)
