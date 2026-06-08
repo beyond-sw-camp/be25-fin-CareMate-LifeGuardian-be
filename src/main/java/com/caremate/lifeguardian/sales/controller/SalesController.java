@@ -3,6 +3,7 @@ package com.caremate.lifeguardian.sales.controller;
 import com.caremate.lifeguardian.common.ApiResponse;
 import com.caremate.lifeguardian.common.security.SecurityUtil;
 import com.caremate.lifeguardian.sales.dto.request.SalesSearchRequestDto;
+import com.caremate.lifeguardian.sales.dto.response.SalesPageResponseDto;
 import com.caremate.lifeguardian.sales.dto.response.SalesSummaryResponseDto;
 import com.caremate.lifeguardian.sales.service.SalesService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,13 +30,12 @@ public class SalesController {
     @Operation(summary = "영업사원 KPI 조회", description = "영업사원의 이달 성과 및 목표성과를 조회합니다.")
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<SalesSummaryResponseDto>> getSalesSummary(
-            // 요청값 형식 검증
+            // 조회 대상 연월은 yyyyMM 형식으로 받는다.
             @RequestParam @Pattern(regexp = "\\d{6}", message = "조회 연월은 yyyyMM 형식이어야 합니다.") String targetYearMonth
     ) {
+        // 로그인한 영업사원의 KPI만 조회한다.
         Long currentUserId = SecurityUtil.getCurrentUserId();
-        SalesSummaryResponseDto response = salesService.getSalesSummary(salesUserId, targetYearMonth);
 
-        Long currentUserId = SecurityUtil.getCurrentUserId();
         SalesSummaryResponseDto response = salesService.getSalesSummary(currentUserId, targetYearMonth);
 
         return ResponseEntity.ok(
@@ -46,7 +46,10 @@ public class SalesController {
     @Operation(summary = "영업현황 목록 조회", description = "영업사원이 관리하는 고객의 영업현황 목록을 조회합니다.")
     @GetMapping("/contracts")
     public ResponseEntity<ApiResponse<SalesPageResponseDto>> getSalesList(@ModelAttribute SalesSearchRequestDto request) {
-        SalesPageResponseDto response = salesService.getSalesList(request);
+        // 요청 파라미터의 salesUserId는 신뢰하지 않고 로그인 사용자 기준으로 조회한다.
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+
+        SalesPageResponseDto response = salesService.getSalesList(currentUserId, request);
 
         return ResponseEntity.ok(
                 ApiResponse.success(200, "영업현황 목록 조회에 성공했습니다.", response)

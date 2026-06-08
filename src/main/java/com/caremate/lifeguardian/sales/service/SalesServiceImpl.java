@@ -3,6 +3,7 @@ package com.caremate.lifeguardian.sales.service;
 import com.caremate.lifeguardian.common.exception.BaseException;
 import com.caremate.lifeguardian.sales.dto.request.SalesSearchRequestDto;
 import com.caremate.lifeguardian.sales.dto.response.SalesListResponseDto;
+import com.caremate.lifeguardian.sales.dto.response.SalesPageResponseDto;
 import com.caremate.lifeguardian.sales.dto.response.SalesSummaryResponseDto;
 import com.caremate.lifeguardian.sales.mapper.SalesMapper;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +23,14 @@ public class SalesServiceImpl implements SalesService {
 
     /*
     - 영업현황 KPI 조회
-    - 404, 500 예외처리
+    - 로그인한 영업사원 ID와 조회 연월로 월간 목표 및 계약 성과를 조회
+    - 조회 연월 형식과 월 범위를 검증하고, 목표 정보가 없으면 404 예외를 반환
+    - DB 조회 중 오류가 발생하면 500 예외를 반환
      */
     @Override
     @Transactional(readOnly = true)
     public SalesSummaryResponseDto getSalesSummary(Long currentUserId, String targetYearMonth) {
-        validateSalesSummaryRequest(targetYearMonth);
+        validateSalesSummaryRequest(currentUserId, targetYearMonth);
 
         SalesSummaryResponseDto salesSummary;
         try {
@@ -44,17 +47,36 @@ public class SalesServiceImpl implements SalesService {
         return salesSummary;
     }
 
-    private void validateSalesSummaryRequest(String targetYearMonth) {
+    private void validateSalesSummaryRequest(Long currentUserId, String targetYearMonth) {
+        if (currentUserId == null || currentUserId < 1) {
+            throw new BaseException(400, "영업사원 ID는 1 이상이어야 합니다.");
+        }
+
+        if (targetYearMonth == null || !targetYearMonth.matches("\\d{6}")) {
+            throw new BaseException(400, "조회 연월은 yyyyMM 형식이어야 합니다.");
+        }
+
         int month = Integer.parseInt(targetYearMonth.substring(4, 6));
         // 조회 연도, 달 예외처리
         if (month < 1 || month > 12) {
             throw new BaseException(400, "월은 1부터 12 사이여야 합니다.");
         }
     }
+
+    /*
+    - 영업현황 목록 조회
+    - 로그인한 영업사원 ID로 고객 목록을 제한하고 검색 조건을 적용
+    - 전체 건수 조회 후 페이지 정보를 계산하고, 조회 결과를 페이지 응답으로 조립
+    - 검색 조건이 잘못되면 400, DB 조회 중 오류가 발생하면 500 예외를 반환
+     */
     @Override
-    public SalesPageResponseDto getSalesList(SalesSearchRequestDto request) {
+    @Transactional(readOnly = true)
+    public SalesPageResponseDto getSalesList(Long currentUserId, SalesSearchRequestDto request) {
         // 검색 조건을 먼저 검증하고, 잘못된 값이 있으면 400 예외 발생
-        validateSalesListRequest(request);
+        validateSalesListRequest(currentUserId, request);
+
+        // 클라이언트가 전달한 salesUserId 대신 인증된 사용자 ID를 사용
+        request.setSalesUserId(currentUserId);
 
         try {
             // 검색 조건에 맞는 전체 고객 수를 조회해 페이지 정보를 계산
@@ -82,12 +104,13 @@ public class SalesServiceImpl implements SalesService {
         }
     }
 
-    private void validateSalesListRequest(SalesSearchRequestDto request) {
+    private void validateSalesListRequest(Long currentUserId, SalesSearchRequestDto request) {
         if (request == null) {
             throw new BaseException(400, "검색 조건은 필수입니다.");
         }
 
-        if (request.getSalesUserId() == null || request.getSalesUserId() < 1) {
+        // 영업현황 목록은 로그인한 영업사원 기준으로만 조회
+        if (currentUserId == null || currentUserId < 1) {
             throw new BaseException(400, "영업사원 ID는 1 이상이어야 합니다.");
         }
         if (request.getGender() != null
@@ -103,6 +126,9 @@ public class SalesServiceImpl implements SalesService {
         }
         if (request.getSize() < 1) {
             throw new BaseException(400, "페이지 크기는 1 이상이어야 합니다.");
+        }
+        if (request.getSize() > 100) {
+            throw new BaseException(400, "페이지 크기는 100 이하여야 합니다.");
         }
     }
 }
