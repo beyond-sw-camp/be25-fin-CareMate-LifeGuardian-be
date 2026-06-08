@@ -103,7 +103,20 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
             throw new BaseException(404, "부모 통합고객 정보를 찾을 수 없습니다.");
         }
 
-        // 2. 잠재고객 등록용 domain 객체 생성
+        // 2. 중복 잠재고객 등록 여부 확인
+        boolean existsDuplicate =
+                potentialCustomerMapper.existsDuplicatePotentialCustomer(
+                        request.getParentCustomerId(),
+                        request.getName(),
+                        request.getGender(),
+                        request.getBirthDate()
+                );
+
+        if (existsDuplicate) {
+            throw new BaseException(409, "이미 등록된 잠재고객입니다.");
+        }
+
+        // 3. 잠재고객 등록용 domain 객체 생성
         PotentialCustomer potentialCustomer = new PotentialCustomer();
         potentialCustomer.setParentCustomerId(request.getParentCustomerId());
         potentialCustomer.setSalesUserId(salesUserId);
@@ -112,7 +125,7 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
         potentialCustomer.setGender(request.getGender());
         potentialCustomer.setBirthDate(request.getBirthDate());
 
-        // 3.잠재고객 등록
+        // 4.잠재고객 등록
         int insertedCount =
                 potentialCustomerMapper.insertPotentialCustomer(potentialCustomer);
 
@@ -120,7 +133,7 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
              throw new BaseException(500, "시스템 오류로 인해 잠재고객을 등록하지 못했습니다. 관리자에게 문의하세요.");
         }
 
-        // 4. 등록 완료된 잠재고객 단건 조회 후 반환
+        // 5. 등록 완료된 잠재고객 단건 조회 후 반환
         return potentialCustomerMapper.findCreatedPotentialCustomer(
                 potentialCustomer.getId()
         );

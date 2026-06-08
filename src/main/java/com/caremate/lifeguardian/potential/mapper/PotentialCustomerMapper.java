@@ -8,6 +8,7 @@ import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerListRes
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Mapper
@@ -27,6 +28,14 @@ public interface PotentialCustomerMapper {
     // 부모 통합고객 존재 여부 확인(잠재고객 등록 전 parentCustomerId가 실제 존재하는지 검증)
     boolean existsParentCustomer(
             @Param("parentCustomerId") Long parentCustomerId
+    );
+
+    // 중복 잠재고객 존재 여부 확인
+    boolean existsDuplicatePotentialCustomer(
+            @Param("parentCustomerId") Long parentCustomerId,
+            @Param("name") String name,
+            @Param("gender") String gender,
+            @Param("birthDate") LocalDate birthDate
     );
 
     // 잠재고객 등록

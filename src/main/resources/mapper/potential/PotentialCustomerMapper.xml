@@ -91,6 +91,17 @@
         WHERE integrated_customer_id = #{parentCustomerId}
     </select>
 
+    <!-- 중복 잠재고객 존재 여부 확인 -->
+    <select id="existsDuplicatePotentialCustomer" resultType="boolean">
+
+        SELECT COUNT(*) > 0
+        FROM potential_customer
+        WHERE parent_customer_id = #{parentCustomerId}
+            AND name = #{name}
+            AND gender = #{gender}
+            AND birth_date = #{birthDate}
+    </select>
+
     <!-- 잠재고객 등록 -->
     <insert id="insertPotentialCustomer"
             parameterType="com.caremate.lifeguardian.potential.domain.PotentialCustomer"
