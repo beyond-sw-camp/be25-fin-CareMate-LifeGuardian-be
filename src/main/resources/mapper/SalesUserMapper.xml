@@ -145,4 +145,42 @@
         WHERE id = #{id}
     </update>
 
+    <!-- 이관 이력 벌크 기록 (MyBatis INSERT-SELECT) -->
+    <insert id="insertCustomerAssignmentHistory">
+        INSERT INTO customer_assignment_history (
+            potential_customer_id,
+            integrated_customer_id,
+            from_sales_user_id,
+            to_sales_user_id,
+            changed_by_user_id,
+            reason,
+            changed_at
+        )
+        SELECT
+            pc.id,
+            pc.parent_customer_id,
+            pc.sales_user_id,
+            #{toUserId},
+            #{changedByUserId},
+            #{reason},
+            CURRENT_TIMESTAMP
+        FROM potential_customer pc
+        WHERE pc.sales_user_id = #{fromUserId}
+    </insert>
+
+    <!-- 잠재고객 소유권 일괄 변경 -->
+    <update id="updatePotentialCustomersUserId">
+        UPDATE potential_customer
+        SET sales_user_id = #{toUserId},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE sales_user_id = #{fromUserId}
+    </update>
+
+    <!-- 통합고객 소유권 일괄 변경 -->
+    <update id="updateIntegratedCustomersUserId">
+        UPDATE integrated_customer
+        SET sales_user_id = #{toUserId},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE sales_user_id = #{fromUserId}
+    </update>
 </mapper>

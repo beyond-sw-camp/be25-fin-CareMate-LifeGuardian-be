@@ -1,13 +1,11 @@
 package com.caremate.lifeguardian.member.controller;
 
 import com.caremate.lifeguardian.common.ApiResponse;
+import com.caremate.lifeguardian.member.dto.request.SalesUserCustomerTransferRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
 import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
-import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
-import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
-import com.caremate.lifeguardian.member.dto.response.SalesUserRetireResponse;
-import com.caremate.lifeguardian.member.dto.response.SalesUserStatusUpdateResponse;
+import com.caremate.lifeguardian.member.dto.response.*;
 import com.caremate.lifeguardian.member.service.SalesUserService;
 import com.caremate.lifeguardian.common.security.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -85,4 +83,22 @@ public class SalesUserController {
         return ResponseEntity
                 .ok(ApiResponse.success(200, "영업사원 퇴사 처리 및 기기 세션 만료가 정상적으로 완료되었습니다.", response));
     }
+
+    @Operation(summary = "퇴사자 고객 일괄 이관 (인사 관리용)", description = "관리자가 퇴사 예정자가 담당하고 있는 모든 잔여 고객의 소유권을 다른 영업사원에게 일괄 이관합니다.")
+    @PostMapping("/{userId}/transfer-customers")
+    public ResponseEntity<ApiResponse<SalesUserCustomerTransferResponse>> transferCustomers(
+            @PathVariable Long userId,
+            @Valid @RequestBody SalesUserCustomerTransferRequest request) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        log.info("퇴사자 고객 일괄 이관 API 요청 수신 - 기존 userId: {}, 인계받을 toUserId: {}, 요청 관리자 ID: {}", userId, request.getToUserId(), currentUserId);
+
+        SalesUserCustomerTransferResponse response = salesUserService.transferCustomers(userId, request, currentUserId);
+        log.info("퇴사자 고객 일괄 이관 API 처리 성공 - 기존 userId: {}, 인계받을 toUserId: {}, 요청 관리자 ID: {}", userId, request.getToUserId(), currentUserId);
+
+        String message = String.format("총 %d명의 고객이 성공적으로 이관되었습니다.", response.getTransferredPotentialCount());
+
+        return ResponseEntity
+                .ok(ApiResponse.success(200, message, response));
+    }
+
 }
