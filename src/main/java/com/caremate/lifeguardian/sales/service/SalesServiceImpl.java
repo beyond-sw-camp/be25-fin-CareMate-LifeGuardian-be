@@ -18,12 +18,12 @@ public class SalesServiceImpl implements SalesService {
     - 404, 500 예외처리
      */
     @Override
-    public SalesSummaryResponseDto getSalesSummary(Long salesUserId, String targetYearMonth) {
-        validateSalesSummaryRequest(salesUserId, targetYearMonth);
+    public SalesSummaryResponseDto getSalesSummary(Long currentUserId, String targetYearMonth) {
+        validateSalesSummaryRequest(targetYearMonth);
 
         SalesSummaryResponseDto salesSummary;
         try {
-            salesSummary = salesMapper.getSalesSummary(salesUserId, targetYearMonth);
+            salesSummary = salesMapper.getSalesSummary(currentUserId, targetYearMonth);
         } catch (DataAccessException e) {
             throw new BaseException(500, "시스템 오류로 인해 정보를 조회하지 못했습니다. 관리자에게 문의하세요.");
         }
@@ -36,7 +36,7 @@ public class SalesServiceImpl implements SalesService {
         return salesSummary;
     }
 
-    private void validateSalesSummaryRequest(Long salesUserId, String targetYearMonth) {
+    private void validateSalesSummaryRequest(String targetYearMonth) {
 
         int month = Integer.parseInt(targetYearMonth.substring(4, 6));
         // 조회 연도, 달 예외처리

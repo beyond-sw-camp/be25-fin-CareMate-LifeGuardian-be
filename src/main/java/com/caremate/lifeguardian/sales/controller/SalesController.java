@@ -1,11 +1,11 @@
 package com.caremate.lifeguardian.sales.controller;
 
 import com.caremate.lifeguardian.common.ApiResponse;
+import com.caremate.lifeguardian.common.security.SecurityUtil;
 import com.caremate.lifeguardian.sales.dto.response.SalesSummaryResponseDto;
 import com.caremate.lifeguardian.sales.service.SalesService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -26,10 +26,10 @@ public class SalesController {
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<SalesSummaryResponseDto>> getSalesSummary(
             // 요청값 형식 검증
-            @RequestParam @Positive Long salesUserId,
             @RequestParam @Pattern(regexp = "\\d{6}", message = "조회 연월은 yyyyMM 형식이어야 합니다.") String targetYearMonth
             ) {
-        SalesSummaryResponseDto response = salesService.getSalesSummary(salesUserId, targetYearMonth);
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        SalesSummaryResponseDto response = salesService.getSalesSummary(currentUserId, targetYearMonth);
 
         return ResponseEntity.ok(
                 ApiResponse.success(200, "영업현황 요약 조회에 성공했습니다.", response)
