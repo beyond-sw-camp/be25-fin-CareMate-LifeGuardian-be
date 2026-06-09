@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.caremate.lifeguardian.admin.mapper.BranchStatisticsMapper">
+
+    <!-- 특정 지점의 연간 계약 수 카운트 -->
+    <select id="countContractsByBranchAndYear" resultType="int">
+        SELECT COUNT(c.id)
+        FROM contract c
+                 JOIN sales_user su ON c.sales_user_id = su.id
+        WHERE su.branch_id = #{branchId}
+          AND YEAR(c.updated_at) = #{year}
+          AND c.contract_status_code = '06'
+          AND c.contract_result_status_code = '02'
+    </select>
+
+    <!-- 특정 지점의 연간 목표치 조회 (소속 영업사원들의 월간 목표 합산) -->
+    <select id="selectAnnualTarget" resultType="java.lang.Integer">
+        SELECT COALESCE(SUM(smt.target_contract_count), 0)
+        FROM sales_monthly_target smt
+                 JOIN sales_user su ON smt.sales_user_id = su.id
+        WHERE su.branch_id = #{branchId}
+          AND smt.target_year_month LIKE CONCAT(#{year}, '%')
+    </select>
+
+    <!-- 특정 지점의 월별 계약 수 카운트 (DATE_FORMAT 이용) -->
+    <select id="countContractsByBranchAndMonth" resultType="int">
+        SELECT COUNT(c.id)
+        FROM contract c
+                 JOIN sales_user su ON c.sales_user_id = su.id
+        WHERE su.branch_id = #{branchId}
+          AND DATE_FORMAT(c.updated_at, '%Y-%m') = #{yearMonth}
+          AND c.contract_status_code = '06'
+          AND c.contract_result_status_code = '02'
+    </select>
+
+    <!-- 특정 지점의 활성 영업사원 수 조회 -->
+    <select id="countActiveSalesUsersByBranch" resultType="int">
+        SELECT COUNT(*)
+        FROM sales_user
+        WHERE branch_id = #{branchId}
+          AND status_code = '01'
+    </select>
+
+
+</mapper>
