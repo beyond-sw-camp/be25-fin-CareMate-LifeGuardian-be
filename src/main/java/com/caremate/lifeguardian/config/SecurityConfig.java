@@ -56,18 +56,36 @@ public class SecurityConfig {
                         // 인증 없어도 접근 가능
                         .requestMatchers(
                                 "/",
-                                "/oauth2/**",                // OAuth2 리다이렉트 경로
-                                "/v3/api-docs/**",           // Swagger용
-                                "/swagger-ui/**",            // Swagger UI용
                                 "/api/v1/sales-users",
                                 "/api/v1/sales-users/*",
                                 "/api/v1/sales-users/*/status",
+                                "/api/v1/sales/*",
                                 "/api/v1/sales-users/*/transfer-customers",
-                                "/api/v1/sales-users/pii-secure"
+                                "/api/v1/sales-users/pii-secure",
+                                "/api/v1/branches/*/statistics/annual-contracts",
+                                "/api/v1/potential-customers",
+                                "/api/v1/potential-customers/parent/search",
+                                "/api/v1/potential-customers/{potentialCustomerId}",
+                                "/api/v1/branches/*/statistics/monthly-contracts",
+                                "/api/v1/auth/login",
+                                "/oauth2/**",                   // OAuth2 리다이렉트 경로
+                                "/v3/api-docs/**",              // Swagger용
+                                "/swagger-ui/**"                // Swagger UI용
                         ).permitAll()
+
 //                        // 인증 필요
 //                        .requestMatchers(
 //                                "/api/v1/auth/logout/**",    // 로그아웃
+//                                "/api/v1/members/me",        // 프로필 조회 수정
+//                                "/api/v1/members/me/profile",   // 프로필 추가
+//                                "/api/v1/routines/**",       // 루틴 관련
+//                                "/api/v1/cognitive-games/**",// 미니게임
+//                                "/api/v1/open-questions/**", // 질문
+//                                "/api/v1/daily-records/**",  // 기록
+//                                "/api/v1/trophies",          // 트로피
+//                                "/api/v1/notices/**",        // 공지
+//                                "/api/v1/calendar/**",       // 캘린더
+//                                "/api/v1/statistics/**"     // 통계
 //                        ).hasRole("USER")
                         // ROLE_WITHDRAWN 만 복구 로직 접근 가능
                         //.requestMatchers("/api/v1/members/me/recovery").hasRole("WITHDRAWN")
@@ -99,17 +117,5 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        // 아래 경로들은 필터 체인(JwtFilter 포함)을 아예 거치지 않고 바로 통과됩니다.
-        return (web) -> web.ignoring()
-                .requestMatchers(
-                        "/swagger-ui/**",
-                        "/swagger-ui.html",
-                        "/v3/api-docs/**",
-                        "/swagger-resources/**",
-                        "/api-docs/**");
     }
 }

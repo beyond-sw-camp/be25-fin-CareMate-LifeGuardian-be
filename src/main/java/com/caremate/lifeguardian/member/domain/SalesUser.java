@@ -33,8 +33,13 @@ public class SalesUser {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // 사번을 할당(동기화)하기 위한 비즈니스 메서드
+    // 사번을 할당(동기화)하기 위한 메서드
     public void assignEmployeeId(String employeeId) {
         this.employeeId = employeeId;
+    }
+
+    // 영업사원의 계정 상태를 변경하는 메서드
+    public void changeStatus(String statusCode) {
+        this.statusCode = statusCode;
     }
 }
