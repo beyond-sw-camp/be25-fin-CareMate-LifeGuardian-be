@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -41,16 +42,15 @@ public class SecurityConfig {
 
                 // 3. 세션 정책: 세션을 사용하지 않음 (Stateless)
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 4. 인증/인가: 인증되지 않은 사용자가 접근했을 때 401과 함께 메시지 전달
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"code\": 401, \"message\": \"로그인이 필요한 서비스입니다.\"}");
-                        })
-                )
+                            response.getWriter().write(
+                                    "{\"code\": 401, \"message\": \"로그인이 필요한 서비스입니다.\"}");
+                        }))
                 // 5. 경로별 권한 제어
                 .authorizeHttpRequests(auth -> auth
                         // 인증 없어도 접근 가능
@@ -63,6 +63,9 @@ public class SecurityConfig {
                                 "/api/v1/sales-users/*/transfer-customers",
                                 "/api/v1/sales-users/pii-secure",
                                 "/api/v1/branches/*/statistics/annual-contracts",
+                                "/api/v1/potential-customers",
+                                "/api/v1/potential-customers/parent/search",
+                                "/api/v1/potential-customers/{potentialCustomerId}",
                                 "/api/v1/branches/*/statistics/monthly-contracts",
                                 "/api/v1/auth/login",
                                 "/oauth2/**",                   // OAuth2 리다이렉트 경로
@@ -89,7 +92,8 @@ public class SecurityConfig {
                         .anyRequest()
                         .authenticated()
                 ) // JwtFilter는 스프링 시큐리티 내부에서만 사용
-                .addFilterBefore(new JwtFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtFilter(jwtProvider),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
