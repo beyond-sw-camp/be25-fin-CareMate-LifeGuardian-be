@@ -19,56 +19,76 @@ import java.util.Collections;
 @Slf4j
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
+
     private final JwtProvider jwtProvider;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
     ) throws ServletException, IOException {
+
         try {
+            // Authorization 헤더 조회
             String header = request.getHeader("Authorization");
+
+            // JWT가 없으면 다음 필터로 이동
             if (header == null || !header.startsWith("Bearer ")) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
+            // "Bearer " 제거 후 토큰 추출
             String token = header.substring(7);
 
-            if (jwtProvider.validateToken(token)) {
-                Claims claims = jwtProvider.getClaims(token);
-                Long memberId = Long.parseLong(claims.getSubject());
-                String roleName = claims.get("role", String.class);
+            // JWT Claims 조회
+            Claims claims = jwtProvider.getClaims(token);
 
-                // 계정 상태확인
-                String statusName = claims.get("status",String.class);
+            Long memberId = Long.parseLong(claims.getSubject());
+            String roleName = claims.get("role", String.class);
 
-                // 비활성시 로그인 불가
-                if ("RETIRED".equals(statusName)) {
-                    throw new AuthException("퇴사 처리되거나 정지된 계정입니다.");
-                }
+            // 권한 생성
+            SimpleGrantedAuthority authority =
+                    new SimpleGrantedAuthority("ROLE_" + roleName);
 
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + roleName);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(memberId, null, Collections.singleton(authority));
+            // 인증 객체 생성
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            memberId,
+                            null,
+                            Collections.singleton(authority)
+                    );
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            }
+            // SecurityContext에 인증 정보 저장
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+
+            // 다음 필터 실행
             filterChain.doFilter(request, response);
 
-        } catch (AuthException e) { // AuthException을 잡음
-            log.error("JWT 필터 내 인증 예외 발생: {}", e.getMessage());
+        } catch (AuthException e) {
+
+            // JWT 인증 예외 처리
+            log.error("JWT 인증 실패: {}", e.getMessage());
+
             setErrorResponse(response, e.getMessage());
         }
     }
 
-    private void setErrorResponse(HttpServletResponse response, String message) throws IOException {
-        // AuthException 무조건 401이므로 숫자를 고정
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+    /**
+     * 인증 실패 시 401 응답 반환
+     */
+    private void setErrorResponse(
+            HttpServletResponse response,
+            String message
+    ) throws IOException {
+
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
 
         String json = String.format(
-                "{\"status\": 401, \"message\": \"%s\", \"data\": null}",
+                "{\"status\":401,\"message\":\"%s\",\"data\":null}",
                 message
         );
 
