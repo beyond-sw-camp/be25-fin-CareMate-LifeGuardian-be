@@ -1,7 +1,7 @@
 package com.caremate.lifeguardian.auth.service;
 
 import com.caremate.lifeguardian.auth.dto.request.LoginRequest;
-import com.caremate.lifeguardian.auth.dto.response.LoginResponse;
+import com.caremate.lifeguardian.auth.dto.response.AuthResultDto;
 import com.caremate.lifeguardian.auth.mapper.AuthMapper;
 import com.caremate.lifeguardian.common.exception.BaseException;
 import com.caremate.lifeguardian.common.redis.RedisKeyGenerator;
@@ -37,7 +37,7 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	@Transactional
-	public LoginResponse login(
+	public AuthResultDto login(
 			LoginRequest request,
 			String ipAddress,
 			String userAgent
@@ -123,7 +123,7 @@ public class AuthServiceImpl implements AuthService {
 		);
 
 		// 클라이언트에게 전달할 인증 응답 객체 반환 (최초 로그인 여부 포함)
-		return LoginResponse.builder()
+		return AuthResultDto.builder()
 				.accessToken(accessToken)
 				.refreshToken(refreshToken)
 				.userId(user.getId())
