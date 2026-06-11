@@ -1,5 +1,6 @@
 package com.caremate.lifeguardian.dashboard.mapper;
 
+import com.caremate.lifeguardian.dashboard.dto.response.DashboardAchievementResponse;
 import com.caremate.lifeguardian.dashboard.dto.response.DashboardSummaryResponse;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -22,6 +23,16 @@ public interface DashboardMapper {
      * @return 대시보드 요약 정보
      */
     DashboardSummaryResponse findDashboardSummary(
+            @Param("salesUserId") Long salesUserId
+    );
+
+    /**
+     * 영업 달성률 조회
+     *
+     * @Param salesUserId 로그인 영업사원 ID
+     * @return 영업 달성률 정보
+     */
+    DashboardAchievementResponse findDashboardAchievement(
             @Param("salesUserId") Long salesUserId
     );
 }

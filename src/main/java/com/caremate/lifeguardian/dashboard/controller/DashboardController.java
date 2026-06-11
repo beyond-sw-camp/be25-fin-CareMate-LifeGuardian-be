@@ -1,6 +1,7 @@
 package com.caremate.lifeguardian.dashboard.controller;
 
 import com.caremate.lifeguardian.common.ApiResponse;
+import com.caremate.lifeguardian.dashboard.dto.response.DashboardAchievementResponse;
 import com.caremate.lifeguardian.dashboard.dto.response.DashboardSummaryResponse;
 import com.caremate.lifeguardian.dashboard.service.DashboardService;
 import com.caremate.lifeguardian.dashboard.service.DashboardServiceImpl;
@@ -48,6 +49,36 @@ public class DashboardController {
         return ApiResponse.success(
                 200,
                 "대시보드 요약 조회에 성공했습니다.",
+                response
+        );
+    }
+
+    /**
+     * 영업 달성률 조회 API
+     *
+     * 기능:
+     * - 로그인한 영업사원의 이번 달 영업 목표 대비 계약 완료 건수와 달성률을 조회한다.
+     *
+     * 조회 데이터:
+     * - 이번 달 목표 계약 건수
+     * - 이번 달 계약 완료 건수
+     * - 영업 달성률
+     *
+     * 현재는 SecurityUtil에서 테스트용 사용자 ID를 가져온다.
+     * 추후 JWT 적용 시 SecurityUtil 내부 로직만 실제 로그인 사용자 추출 방식으로 변경하면 된다.
+     *
+     * @return 영업 달성율 정보
+     */
+    @Operation(summary = "영업 달성률 조회", description = "로그인한 영업사원의 이번달 목표 계약 건수, 계약 완료 건수, 달성률을 조회합니다.")
+    @GetMapping("/achievement")
+    public ApiResponse<DashboardAchievementResponse> getDashboardAchievement() {
+
+        DashboardAchievementResponse response =
+                dashboardService.getDashboardAchievement();
+
+        return ApiResponse.success(
+                200,
+                "영업 달성률 조회에 성공했습니다.",
                 response
         );
     }

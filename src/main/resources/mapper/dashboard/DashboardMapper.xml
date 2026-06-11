@@ -67,7 +67,7 @@
                     AND c.contract_status_code = '04'
             ) AS subscriptionCompletedCount,
 
-            /*, 수납완료 고객 수 */
+            /* 수납완료 고객 수 */
             (
                 SELECT COUNT(*)
                 FROM contract c
@@ -82,6 +82,40 @@
                 WHERE c.sales_user_id = #{salesUserId}
                     AND c.contract_result_status_code = '02'
             ) AS contractCompletedCount
+    </select>
 
+    <!-- 영업 달성률 조회 -->
+    <select id="findDashboardAchievement"
+            resultType="com.caremate.lifeguardian.dashboard.dto.response.DashboardAchievementResponse">
+
+        SELECT
+            COALESCE(smt.target_contract_count, 0) AS targetContractCount,
+
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_result_status_code = '02'
+                    AND DATE_FORMAT(c.updated_at, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m')
+            ) AS completedContractCount,
+
+            CASE
+                WHEN COALESCE(smt.target_contract_count, 0) = 0 THEN 0
+                ELSE ROUND(
+                     (
+                         (
+                             SELECT COUNT(*)
+                             FROM contract c
+                             WHERE c.sales_user_id = #{salesUserId}
+                                AND c.contract_result_status_code = '02'
+                                AND DATE_FORMAT(c.updated_at, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m')
+                         ) * 100.0
+                     ) / smt.target_contract_count
+                )
+            END AS achievementRate
+
+        FROM sales_monthly_target smt
+        WHERE smt.sales_user_id = #{salesUserId}
+            AND smt.target_year_month = DATE_FORMAT(CURDATE(), '%Y%m')
     </select>
 </mapper>
