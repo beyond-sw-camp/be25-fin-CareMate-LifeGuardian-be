@@ -68,6 +68,7 @@ public class SecurityConfig {
                                 "/api/v1/potential-customers/{potentialCustomerId}",
                                 "/api/v1/branches/*/statistics/monthly-contracts",
                                 "/api/v1/auth/login",
+                                "/api/v1/dashboard/**",
                                 "/oauth2/**",                   // OAuth2 리다이렉트 경로
                                 "/v3/api-docs/**",              // Swagger용
                                 "/swagger-ui/**"                // Swagger UI용

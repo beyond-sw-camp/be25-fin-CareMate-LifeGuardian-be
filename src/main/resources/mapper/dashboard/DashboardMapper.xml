@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.caremate.lifeguardian.dashboard.mapper.DashboardMapper">
+
+    <!-- 대시보드 요약 조회
+
+    조회 데이터:
+    - 잠재고객 미상담 고객 수
+    - 잠재고객 상담중 고객 수
+    - 계약 진행 상태별 고객 수
+
+    조회 기준:
+    - 로그인한 영업사원 ID
+    -->
+    <select id="findDashboardSummary"
+            resultType="com.caremate.lifeguardian.dashboard.dto.response.DashboardSummaryResponse">
+
+        SELECT
+            /* 잠재고객 미상담 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM potential_customer pc
+                WHERE pc.sales_user_id = #{salesUserId}
+                    AND pc.consult_status_code = '01'
+            ) AS uncontactedCustomerCount,
+
+            /* 잠재고객 상담중 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM potential_customer pc
+                WHERE pc.sales_user_id = #{salesUserId}
+                    AND pc.consult_status_code = '02'
+            ) AS consultingCustomerCount,
+
+            /* 설계중 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_status_code = '01'
+            ) AS designingContractCount,
+
+            /* 설계완료 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_status_code = '02'
+            ) AS designedContractCount,
+
+            /* 청약중 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_status_code = '03'
+            ) AS subscriptionInProgressCount,
+
+            /* 청약완료 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_status_code = '04'
+            ) AS subscriptionCompletedCount,
+
+            /*, 수납완료 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_status_code = '06'
+            ) AS paymentCompletedCount,
+
+            /*계약완료 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_result_status_code = '02'
+            ) AS contractCompletedCount
+
+    </select>
+</mapper>
