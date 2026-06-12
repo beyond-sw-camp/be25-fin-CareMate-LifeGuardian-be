@@ -17,6 +17,11 @@
                  LEFT JOIN contract c
                            ON s.sales_user_id = c.sales_user_id
                                 AND c.contract_result_status_code = '02'
+                                AND c.created_at >= STR_TO_DATE(CONCAT(s.target_year_month, '01'), '%Y%m%d')
+                                AND c.created_at &lt; DATE_ADD(
+                                    STR_TO_DATE(CONCAT(s.target_year_month, '01'), '%Y%m%d'),
+                                    INTERVAL 1 MONTH
+                                )
         WHERE s.sales_user_id = #{id}
           AND s.target_year_month = #{targetYearMonth}
         GROUP BY s.target_year_month,
@@ -24,7 +29,6 @@
     </select>
 
     <select id="countSalesList"
-            parameterType="com.caremate.lifeguardian.sales.dto.request.SalesSearchRequestDto"
             resultType="long">
         WITH customer_base AS (
             SELECT
@@ -32,10 +36,11 @@
                 '01' AS customer_type_code,
                 pc.name AS customer_name,
                 pc.gender,
-                pc.birth_date
+                pc.birth_date,
+                pc.consult_status_code
             FROM potential_customer pc
             WHERE pc.conversion_status_code = '01'
-              AND pc.sales_user_id = #{salesUserId}
+              AND pc.sales_user_id = #{currentUserId}
 
             UNION ALL
 
@@ -44,43 +49,54 @@
                 '02' AS customer_type_code,
                 ic.name AS customer_name,
                 ic.gender,
-                ic.birth_date
+                ic.birth_date,
+                NULL AS consult_status_code
             FROM integrated_customer ic
-            WHERE ic.sales_user_id = #{salesUserId}
+            WHERE ic.sales_user_id = #{currentUserId}
         )
         SELECT COUNT(*)
         FROM customer_base cb
         WHERE 1 = 1
 
-        <if test="customerName != null and customerName != ''">
-            AND cb.customer_name LIKE CONCAT('%', #{customerName}, '%')
+        <if test="request.customerName != null and request.customerName.trim() != ''">
+            AND LOWER(REGEXP_REPLACE(cb.customer_name, '[[:space:]]+', ''))
+                LIKE CONCAT(
+                    '%',
+                    LOWER(REGEXP_REPLACE(#{request.customerName}, '[[:space:]]+', '')),
+                    '%'
+                )
         </if>
 
-        <if test="age != null">
-            AND TIMESTAMPDIFF(YEAR, cb.birth_date, CURDATE()) = #{age}
+        <if test="request.age != null">
+            AND TIMESTAMPDIFF(YEAR, cb.birth_date, CURDATE()) = #{request.age}
         </if>
 
-        <if test="gender != null and gender != ''">
-            AND cb.gender = #{gender}
+        <if test="request.gender != null and request.gender != ''">
+            AND cb.gender = #{request.gender}
         </if>
 
-        <if test="contractStatusCodes != null and contractStatusCodes.size() > 0">
+        <if test="request.contractStatusCodes != null and request.contractStatusCodes.size() > 0">
             AND (
-                SELECT c.contract_status_code
-                FROM contract c
-                WHERE c.insured_id = cb.customer_id
-                ORDER BY
-                    CASE c.contract_result_status_code
-                        WHEN '01' THEN 1
-                        WHEN '02' THEN 2
-                        WHEN '03' THEN 3
-                        ELSE 9
-                    END,
-                    c.updated_at DESC,
-                    c.id DESC
-                LIMIT 1
+                CASE
+                    WHEN cb.customer_type_code = '01' THEN cb.consult_status_code
+                    WHEN cb.customer_type_code = '02' THEN (
+                        SELECT c.contract_status_code
+                        FROM contract c
+                        WHERE c.integrated_customer_id = cb.customer_id
+                        ORDER BY
+                            CASE c.contract_result_status_code
+                                WHEN '01' THEN 1
+                                WHEN '02' THEN 2
+                                WHEN '03' THEN 3
+                                ELSE 9
+                            END,
+                            c.updated_at DESC,
+                            c.id DESC
+                        LIMIT 1
+                    )
+                END
             ) IN
-            <foreach collection="contractStatusCodes"
+            <foreach collection="request.contractStatusCodes"
                      item="code"
                      open="("
                      separator=","
@@ -89,7 +105,7 @@
             </foreach>
         </if>
 
-        <if test="hasReport != null and hasReport == true">
+        <if test="request.hasReport != null and request.hasReport == true">
             AND EXISTS (
                 SELECT 1
                 FROM customer_report cr
@@ -98,7 +114,7 @@
             )
         </if>
 
-        <if test="hasReport != null and hasReport == false">
+        <if test="request.hasReport != null and request.hasReport == false">
             AND NOT EXISTS (
                 SELECT 1
                 FROM customer_report cr
@@ -107,7 +123,7 @@
             )
         </if>
 
-        <if test="hasThreeStep != null and hasThreeStep == true">
+        <if test="request.hasThreeStep != null and request.hasThreeStep == true">
             AND EXISTS (
                 SELECT 1
                 FROM daily_action_item dai
@@ -118,7 +134,7 @@
             )
         </if>
 
-        <if test="hasThreeStep != null and hasThreeStep == false">
+        <if test="request.hasThreeStep != null and request.hasThreeStep == false">
             AND NOT EXISTS (
                 SELECT 1
                 FROM daily_action_item dai
@@ -130,10 +146,7 @@
         </if>
     </select>
 
-    <select id="getSalesList"
-            parameterType="com.caremate.lifeguardian.sales.dto.request.SalesSearchRequestDto"
-            resultType="SalesList">
-
+    <select id="getSalesList" resultType="SalesList">
         WITH customer_base AS (
             SELECT
                 pc.id AS customer_id,
@@ -147,7 +160,7 @@
                 pc.created_at
         FROM potential_customer pc
         WHERE pc.conversion_status_code = '01'
-            AND pc.sales_user_id = #{salesUserId}
+            AND pc.sales_user_id = #{currentUserId}
 
         UNION ALL
 
@@ -162,7 +175,7 @@
             ic.insurance_age_shift_date,
             ic.created_at
             FROM integrated_customer ic
-            WHERE ic.sales_user_id = #{salesUserId}
+            WHERE ic.sales_user_id = #{currentUserId}
         ),
 
         representative_contract AS (
@@ -171,7 +184,7 @@
                 SELECT
                     c.*,
                         ROW_NUMBER() OVER (
-                            PARTITION BY c.insured_id
+                            PARTITION BY c.integrated_customer_id
                             ORDER BY
                                 CASE c.contract_result_status_code
                                     WHEN '01' THEN 1
@@ -184,7 +197,8 @@
                         ) AS rn
         FROM contract c
         INNER JOIN customer_base cb
-        ON cb.customer_id = c.insured_id
+        ON cb.customer_type_code = '02'
+        AND cb.customer_id = c.integrated_customer_id
         ) x
         WHERE x.rn = 1
         ),
@@ -256,6 +270,7 @@
             rc.contract_status_code,
             rc.contract_result_status_code,
             rc.insurance_product_id,
+            rc.conversion_status_code AS insured_customer_type_code,
             rc.insured_id,
 
             lw.id AS webform_id,
@@ -268,7 +283,9 @@
             rts.target_date AS three_step_target_date
 
         FROM customer_base cb
-            LEFT JOIN representative_contract rc ON rc.insured_id = cb.customer_id
+            LEFT JOIN representative_contract rc
+                ON cb.customer_type_code = '02'
+                AND rc.integrated_customer_id = cb.customer_id
             LEFT JOIN latest_webform lw
                 ON lw.conversion_status_code = cb.customer_type_code AND lw.customer_id = cb.customer_id
             LEFT JOIN latest_report lr
@@ -292,21 +309,29 @@
         FROM customer_enriched ce
         WHERE 1 = 1
 
-        <if test="customerName != null and customerName != ''">
-            AND ce.customer_name LIKE CONCAT('%', #{customerName}, '%')
+        <if test="request.customerName != null and request.customerName.trim() != ''">
+            AND LOWER(REGEXP_REPLACE(ce.customer_name, '[[:space:]]+', ''))
+                LIKE CONCAT(
+                    '%',
+                    LOWER(REGEXP_REPLACE(#{request.customerName}, '[[:space:]]+', '')),
+                    '%'
+                )
         </if>
 
-        <if test="age != null">
-            AND TIMESTAMPDIFF(YEAR, ce.birth_date, CURDATE()) = #{age}
+        <if test="request.age != null">
+            AND TIMESTAMPDIFF(YEAR, ce.birth_date, CURDATE()) = #{request.age}
         </if>
 
-        <if test="gender != null and gender != ''">
-            AND ce.gender = #{gender}
+        <if test="request.gender != null and request.gender != ''">
+            AND ce.gender = #{request.gender}
         </if>
 
-        <if test="contractStatusCodes != null and contractStatusCodes.size() > 0">
-            AND ce.contract_status_code IN
-            <foreach collection="contractStatusCodes"
+        <if test="request.contractStatusCodes != null and request.contractStatusCodes.size() > 0">
+            AND CASE
+                    WHEN ce.customer_type_code = '01' THEN ce.consult_status_code
+                    WHEN ce.customer_type_code = '02' THEN ce.contract_status_code
+                END IN
+            <foreach collection="request.contractStatusCodes"
                      item="code"
                      open="("
                      separator=","
@@ -315,19 +340,19 @@
             </foreach>
         </if>
 
-        <if test="hasReport != null and hasReport == true">
+        <if test="request.hasReport != null and request.hasReport == true">
             AND ce.report_id IS NOT NULL
         </if>
 
-        <if test="hasReport != null and hasReport == false">
+        <if test="request.hasReport != null and request.hasReport == false">
             AND ce.report_id IS NULL
         </if>
 
-        <if test="hasThreeStep != null and hasThreeStep == true">
+        <if test="request.hasThreeStep != null and request.hasThreeStep == true">
             AND ce.three_step_code IS NOT NULL
         </if>
 
-        <if test="hasThreeStep != null and hasThreeStep == false">
+        <if test="request.hasThreeStep != null and request.hasThreeStep == false">
             AND ce.three_step_code IS NULL
         </if>
 
@@ -337,8 +362,8 @@
             ce.three_step_target_date ASC,
             ce.created_at DESC
 
-        LIMIT #{size}
-        OFFSET #{offset}
+        LIMIT #{request.size}
+        OFFSET #{request.offset}
         )
 
         SELECT
@@ -365,15 +390,21 @@
         COALESCE(consult_code.code_name, '-') AS consultStatusName,
 
         cp.contract_id AS contractId,
-        cp.contract_status_code AS contractStatusCode,
-        COALESCE(contract_code.code_name, '미상담') AS contractStatusName,
+        CASE
+            WHEN cp.customer_type_code = '01' THEN cp.consult_status_code
+            WHEN cp.customer_type_code = '02' THEN cp.contract_status_code
+        END AS contractStatusCode,
+        CASE
+            WHEN cp.customer_type_code = '01' THEN COALESCE(consult_code.code_name, '미상담')
+            WHEN cp.customer_type_code = '02' THEN COALESCE(contract_code.code_name, '-')
+        END AS contractStatusName,
 
         COALESCE(ip.product_name, '-') AS insuranceName,
 
         COALESCE(
         CASE
-            WHEN cp.customer_type_code = '01' THEN pc_insured.name
-            WHEN cp.customer_type_code = '02' THEN ic_insured.name
+            WHEN cp.insured_customer_type_code = '01' THEN pc_insured.name
+            WHEN cp.insured_customer_type_code = '02' THEN ic_insured.name
         END,
         cp.customer_name) AS insuredName,
 
@@ -406,10 +437,10 @@
         FROM customer_page cp
 
         LEFT JOIN potential_customer pc_insured
-            ON cp.customer_type_code = '01' AND pc_insured.id = cp.insured_id
+            ON cp.insured_customer_type_code = '01' AND pc_insured.id = cp.insured_id
 
         LEFT JOIN integrated_customer ic_insured
-            ON cp.customer_type_code = '02' AND ic_insured.integrated_customer_id = cp.insured_id
+            ON cp.insured_customer_type_code = '02' AND ic_insured.integrated_customer_id = cp.insured_id
 
         LEFT JOIN insurance_product ip
             ON cp.insurance_product_id = ip.id

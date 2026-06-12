@@ -59,7 +59,7 @@ public class SecurityConfig {
                                 "/api/v1/sales-users",
                                 "/api/v1/sales-users/*",
                                 "/api/v1/sales-users/*/status",
-                                "/api/v1/sales/*",
+                                "/api/v1/sales/performance/*",
                                 "/api/v1/sales-users/*/transfer-customers",
                                 "/api/v1/sales-users/pii-secure",
                                 "/api/v1/branches/*/statistics/annual-contracts",
@@ -68,6 +68,7 @@ public class SecurityConfig {
                                 "/api/v1/potential-customers/{potentialCustomerId}",
                                 "/api/v1/branches/*/statistics/monthly-contracts",
                                 "/api/v1/auth/login",
+                                "/api/v1/reports/preview/r2",
                                 "/oauth2/**",                   // OAuth2 리다이렉트 경로
                                 "/v3/api-docs/**",              // Swagger용
                                 "/swagger-ui/**"                // Swagger UI용

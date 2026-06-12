@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>고객 성장 리포트</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 18mm;
+        }
+
+        body {
+            margin: 0;
+            color: #1f2937;
+            font-family: "ReportFont", sans-serif;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .header {
+            padding-bottom: 16px;
+            border-bottom: 2px solid #2563eb;
+        }
+
+        .header h1 {
+            margin: 0 0 4px;
+            color: #1e3a8a;
+            font-size: 24px;
+        }
+
+        .meta {
+            color: #6b7280;
+        }
+
+        .section {
+            margin-top: 24px;
+        }
+
+        .section h2 {
+            margin: 0 0 10px;
+            color: #1e40af;
+            font-size: 16px;
+        }
+
+        .content-box {
+            padding: 14px;
+            border: 1px solid #dbeafe;
+            background: #eff6ff;
+        }
+    </style>
+</head>
+<body>
+<header class="header">
+    <h1>고객 성장 리포트</h1>
+    <div class="meta">
+        <span th:text="${reportYear}">2026</span>년 /
+        생성일 <span th:text="${generatedAt}">2026-06-11</span>
+    </div>
+</header>
+
+<section class="section">
+    <h2>고객 정보</h2>
+    <div class="content-box">
+        <strong th:text="${customerName}">고객명</strong>
+    </div>
+</section>
+
+<section class="section">
+    <h2>리포트 요약</h2>
+    <div class="content-box" th:text="${summary}">
+        웹폼 응답을 분석한 요약 내용이 표시됩니다.
+    </div>
+</section>
+</body>
+</html>
