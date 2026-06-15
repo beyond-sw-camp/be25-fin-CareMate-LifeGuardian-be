@@ -118,4 +118,123 @@
         WHERE smt.sales_user_id = #{salesUserId}
             AND smt.target_year_month = DATE_FORMAT(CURDATE(), '%Y%m')
     </select>
+
+    <!-- 오늘 연락 고객 목록 조회 -->
+    <select id="findTodayContactCustomers"
+            resultType="com.caremate.lifeguardian.dashboard.dto.response.ContactCustomerResponse">
+
+        SELECT
+            dai.id AS actionItemId,
+            pc.id AS potentialCustomerId,
+            pc.name AS customerName,
+            pc.gender AS gender,
+            TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) AS age,
+            pc.birth_date AS birthDate,
+            pc.insurance_age_shift_date AS insuranceAgeShiftDate,
+
+            CASE
+                WHEN DATEDIFF(pc.insurance_age_shift_date, CURDATE()) = 30 THEN 'D-30'
+                WHEN DATEDIFF(pc.insurance_age_shift_date, CURDATE()) = 7 THEN 'D-7'
+                WHEN DATEDIFF(pc.insurance_age_shift_date, CURDATE()) = 0 THEN 'D-DAY'
+                ELSE NULL
+            END AS ageChangeLabel,
+
+            CASE
+                WHEN dai.trigger_type_code = '06' THEN '가족 통합 리모델링'
+                ELSE NULL
+            END AS badgeName,
+
+            CASE
+                WHEN dai.trigger_type_code = '06' THEN 'RED'
+                ELSE NULL
+            END AS badgeColor,
+
+            pc.consult_status_code AS consultStatusCode,
+            consult_code.code_name AS consultStatusName,
+
+            CASE
+                WHEN DATE_FORMAT(pc.birth_date, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+                THEN TRUE
+                ELSE FALSE
+            END AS webFormSendEnabled,
+
+            COALESCE(wr.webform_status_code, '01') AS webFormStatusCode,
+            webform_code.code_name AS webFormStatusName,
+
+            cr.id AS reportId,
+
+            CASE
+                WHEN DATEDIFF(pc.insurance_age_shift_date, CURDATE()) = 0
+                THEN TRUE
+                ELSE FALSE
+            END AS reportSendEnabled,
+
+            cr.send_status_code AS reportSendStatusCode,
+            send_code.code_name AS reportSendStatusName,
+
+            dai.priority_score AS priorityScore
+
+        FROM daily_action_item dai
+
+        INNER JOIN potential_customer pc
+            ON dai.customer_id = pc.id
+
+        LEFT JOIN common_code consult_code
+            ON consult_code.group_code = 'CONSULT_STATUS'
+            AND consult_code.code_value = pc.consult_status_code
+
+        LEFT JOIN (
+            SELECT
+                wr1.customer_id,
+                wr1.conversion_status_code,
+                wr1.webform_status_code
+            FROM webform_response wr1
+            INNER JOIN (
+                SELECT
+                    customer_id,
+                    conversion_status_code,
+                    MAX(id) AS latest_webform_id
+                FROM webform_response
+                WHERE  conversion_status_code = '01'
+                GROUP BY customer_id, conversion_status_code
+            ) latest_wr
+                ON wr1.id = latest_wr.latest_webform_id
+        ) wr
+            ON wr.customer_id = pc.id
+            AND wr.conversion_status_code = '01'
+
+        LEFT JOIN common_code webform_code
+            ON webform_code.group_code = 'WEBFORM_STATUS'
+            AND webform_code.code_value = COALESCE(wr.webform_status_code, '01')
+
+        LEFT JOIN customer_report cr
+            ON cr.customer_id = pc.id
+            AND cr.conversion_status_code = '01'
+            AND cr.action_item_id = dai.id
+
+        LEFT JOIN common_code send_code
+            ON send_code.group_code = 'SEND_STATUS'
+            AND send_code.code_value = cr.send_status_code
+
+        WHERE dai.sales_user_id = #{salesUserId}
+            AND dai.target_date = CURDATE()
+            AND dai.is_completed = FALSE
+            AND dai.conversion_status_code = '01'
+            AND (
+                DATE_FORMAT(pc.birth_date, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+                OR DATEDIFF(pc.insurance_age_shift_date, CURDATE()) IN (30, 7, 0)
+                OR dai.trigger_type_code = '06'
+            )
+
+        ORDER BY
+            CASE
+                WHEN DATEDIFF(pc.insurance_age_shift_date, CURDATE()) = 0 THEN 1
+                WHEN DATEDIFF(pc.insurance_age_shift_date, CURDATE()) = 7 THEN 2
+                WHEN DATEDIFF(pc.insurance_age_shift_date, CURDATE()) = 30 THEN 3
+                WHEN dai.trigger_type_code = '06' THEN 4
+                ELSE 5
+            END,
+            dai.priority_score DESC,
+            dai.created_at ASC
+    </select>
 </mapper>

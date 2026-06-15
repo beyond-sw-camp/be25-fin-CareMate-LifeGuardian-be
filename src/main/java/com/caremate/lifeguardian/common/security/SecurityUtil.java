@@ -13,6 +13,6 @@ public final class SecurityUtil {
 
     public static Long getCurrentUserId() {
         // 무조건 1000001번만 나오게 함
-        return 1000001L;
+        return 1000003L;
     }
 }
