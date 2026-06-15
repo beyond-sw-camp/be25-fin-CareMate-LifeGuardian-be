@@ -16,7 +16,13 @@ public interface SalesMapper {
             @Param("targetYearMonth") String targetYearMonth
     );
 
-    long countSalesList(SalesSearchRequestDto request);
+    long countSalesList(
+            @Param("currentUserId") Long currentUserId,
+            @Param("request") SalesSearchRequestDto request
+    );
 
-    List<SalesListResponseDto> getSalesList(SalesSearchRequestDto request);
+    List<SalesListResponseDto> getSalesList(
+            @Param("currentUserId") Long currentUserId,
+            @Param("request") SalesSearchRequestDto request
+    );
 }

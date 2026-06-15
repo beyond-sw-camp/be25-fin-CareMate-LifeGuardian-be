@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${reportTitle}">고객 리포트</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm 12mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: #253047;
+            font-family: "ReportFont", sans-serif;
+            font-size: 9.5px;
+            line-height: 1.45;
+        }
+
+        .header {
+            padding-bottom: 7px;
+            border-bottom: 1px solid #dfe5ee;
+        }
+
+        .title {
+            margin: 0;
+            color: #1f2a44;
+            font-size: 18px;
+        }
+
+        .meta {
+            margin-top: 3px;
+            color: #7b8496;
+            font-size: 8px;
+        }
+
+        .profile {
+            width: 100%;
+            margin-top: 8px;
+            border-collapse: collapse;
+        }
+
+        .profile td {
+            vertical-align: top;
+        }
+
+        .profile-main {
+            width: 58%;
+            padding-right: 12px;
+        }
+
+        .profile-message {
+            width: 42%;
+            padding: 8px 10px;
+            border: 1px solid #dce9f6;
+            border-radius: 6px;
+            background: #f3f8fd;
+        }
+
+        .customer-name {
+            margin: 0;
+            color: #111827;
+            font-size: 17px;
+            text-align: center;
+        }
+
+        .customer-sub {
+            color: #6b7280;
+            text-align: center;
+        }
+
+        .contact {
+            margin-top: 8px;
+            color: #667085;
+        }
+
+        .family-table {
+            width: 100%;
+            margin-top: 6px;
+            border-collapse: collapse;
+        }
+
+        .family-table th,
+        .family-table td {
+            padding: 2px 0;
+            border-bottom: 1px solid #edf0f4;
+            text-align: left;
+        }
+
+        .section {
+            margin-top: 13px;
+            page-break-inside: auto;
+        }
+
+        .section-title {
+            margin: 0 0 4px;
+            color: #202b42;
+            font-size: 14px;
+            page-break-after: avoid;
+        }
+
+        .section-description {
+            margin-bottom: 7px;
+            color: #7b8496;
+            font-size: 8px;
+            page-break-after: avoid;
+        }
+
+        .chart {
+            margin-top: 5px;
+            padding: 10px;
+            border: 1px solid #dfe7f1;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(39, 61, 92, 0.06);
+            page-break-inside: avoid;
+        }
+
+        .chart-image {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .combined-chart {
+            width: 88%;
+            margin-right: auto;
+            margin-left: auto;
+            padding: 6px;
+        }
+
+        .growth-overview {
+            width: 100%;
+            margin: 4px 0 0;
+            border-collapse: separate;
+            border-spacing: 6px;
+        }
+
+        .growth-overview td {
+            width: 50%;
+            padding: 7px 10px;
+            border-radius: 7px;
+            background: #f7faff;
+        }
+
+        .growth-value {
+            color: #234e9a;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .analysis-grid {
+            width: 100%;
+            margin-top: 5px;
+            border-collapse: separate;
+            border-spacing: 4px;
+        }
+
+        .analysis-grid td {
+            width: 50%;
+            padding: 5px 7px;
+            border: 1px solid #dbe7f5;
+            border-radius: 5px;
+            background: #f7fbff;
+            vertical-align: top;
+        }
+
+        .risk-section {
+            margin-top: 9px;
+        }
+
+        .risk-section h3 {
+            margin: 5px 0;
+            font-size: 11px;
+        }
+
+        .risk-card {
+            margin: 6px 0;
+            padding: 9px 11px;
+            border-left: 3px solid #f0b429;
+            border-radius: 5px;
+            background: #fffbea;
+            page-break-inside: avoid;
+        }
+
+        /*noinspection CssUnusedSymbol*/
+        .risk-card.primary {
+            border-left-color: #ef4444;
+            background: #fff1f2;
+        }
+
+        .risk-card.future {
+            border-left-color: #a3aab8;
+            background: #f8fafc;
+        }
+
+        .risk-name {
+            color: #1f2937;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .risk-rank {
+            margin-left: 6px;
+            padding: 2px 5px;
+            color: #9a6700;
+            border-radius: 8px;
+            background: #fff1b8;
+            font-size: 8px;
+        }
+
+        .risk-description {
+            margin-top: 2px;
+            color: #5d6678;
+        }
+
+        .empty {
+            padding: 12px;
+            color: #7b8496;
+            border: 1px dashed #ccd3dd;
+            text-align: center;
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            padding: 10px 12px;
+            color: #7c3f91;
+            border: 1px solid #ead7f1;
+            border-radius: 5px;
+            background: #fbf5ff;
+        }
+    </style>
+</head>
+<body>
+<header class="header">
+    <h1 class="title" th:text="${reportTitle}">성장 리포트</h1>
+    <div class="meta">
+        질병관리청 성장 및 질병 통계 기반 상담 참고자료 /
+        <span th:text="${reportYear}">2026</span>년 /
+        생성일 <span th:text="${generatedAt}">2026-06-12</span>
+    </div>
+</header>
+
+<table class="profile">
+    <tr>
+        <td class="profile-main">
+            <h2 class="customer-name" th:text="${customer.childName}">고객명</h2>
+            <div class="customer-sub">
+                <span th:text="${customer.childBirthDate}">2019-01-01</span> /
+                만 <span th:text="${customer.childAge}">7</span>세 /
+                <span th:text="${customer.childGender == 'MALE' ? '남' : '여'}">남</span>
+            </div>
+
+            <div class="contact">
+                <div>주소: <span th:text="${customer.parentAddress ?: '-'}">주소</span></div>
+                <div>연락처: <span th:text="${customer.parentPhone ?: '-'}">연락처</span></div>
+            </div>
+
+            <table class="family-table">
+                <tr>
+                    <th>가족 현황</th>
+                    <th>관계</th>
+                    <th>나이</th>
+                </tr>
+                <tr>
+                    <td th:text="${customer.parentName ?: '-'}">보호자</td>
+                    <td th:text="${customer.relationName ?: '보호자'}">보호자</td>
+                    <td><span th:text="${customer.parentAge ?: '-'}">39</span>세</td>
+                </tr>
+            </table>
+
+        </td>
+        <td class="profile-message">
+            안녕하세요, <strong th:text="${customer.parentName ?: '보호자'}">보호자</strong>님.<br/>
+            <span th:text="${customer.childName}">자녀</span> 고객님의 현재 성장 정보와
+            동일 연령대의 질병·상해 통계를 바탕으로 리포트가 제작되었습니다.<br/>
+            본 자료는 의료 진단이 아닌 상담 참고자료입니다.
+        </td>
+    </tr>
+</table>
+
+<section class="section" th:if="${hasWebform}">
+    <h2 class="section-title">표준 성장 곡선 분석</h2>
+    <div class="section-description">
+        웹폼에 입력한 키와 몸무게를 동일 성별·연령의 5·50·95백분위 기준과 비교합니다.
+    </div>
+
+    <table class="growth-overview">
+        <tr>
+            <td>
+                현재 키<br/>
+                <span class="growth-value" th:text="${webform.height + ' cm'}">120.5 cm</span>
+            </td>
+            <td>
+                현재 몸무게<br/>
+                <span class="growth-value" th:text="${webform.weight + ' kg'}">25.3 kg</span>
+            </td>
+        </tr>
+    </table>
+
+    <div class="chart combined-chart">
+        <img class="chart-image"
+             th:if="${growthChartDataUri != null}"
+             th:src="${growthChartDataUri}"
+             alt="키와 몸무게 통합 성장 백분위 곡선"/>
+    </div>
+
+    <table class="analysis-grid">
+        <tr>
+            <td>
+                <strong>키 분석</strong><br/>
+                <span th:text="${heightSummary}">키 분석 결과</span>
+            </td>
+            <td>
+                <strong>몸무게 분석</strong><br/>
+                <span th:text="${weightSummary}">몸무게 분석 결과</span>
+            </td>
+        </tr>
+    </table>
+
+</section>
+
+<section class="section risk-section">
+    <h2 class="section-title">생애주기별 질병·상해 위험 분석</h2>
+    <div class="section-description">
+        질병관리청 통계의 진료 인원 순위를 기준으로 현재 연령대의 주요 위험을 보여줍니다.
+    </div>
+
+    <h3>현재 연령대 (<span th:text="${currentAgeGroupName}">5~9세</span>) 주요 위험</h3>
+    <div th:if="${#lists.isEmpty(currentRisks)}" class="empty">
+        현재 연령대에 적재된 질병 통계가 없습니다.
+    </div>
+    <div th:each="risk, status : ${currentRisks}"
+         th:class="${status.index == 0 ? 'risk-card primary' : 'risk-card'}">
+        <span class="risk-name" th:text="${risk.diseaseName}">질병명</span>
+        <span class="risk-rank">
+            <span th:text="${risk.treatmentType}">입원</span>
+            <span th:text="${risk.rank}">1</span>위
+        </span>
+        <div class="risk-description" th:text="${risk.description}">위험 설명</div>
+    </div>
+
+</section>
+
+</body>
+</html>
