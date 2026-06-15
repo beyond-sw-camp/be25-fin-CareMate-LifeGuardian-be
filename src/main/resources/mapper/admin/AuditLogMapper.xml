@@ -1,28 +1,36 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
-  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.caremate.lifeguardian.admin.mapper.AuditLogMapper">
 
     <!-- 감사 로그 목록 페이징 및 조건 필터 조회-->
     <select id="selectAuditLogs" resultType="com.caremate.lifeguardian.admin.dto.response.AuditLogInfo">
-        SELECT 
-            sal.audit_id AS auditId,
-            DATE_FORMAT(sal.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
-            sal.sales_user_id AS salesUserId,
-            su.name AS employeeName,
-            cc.code_name AS actionName,
-            CASE 
-                WHEN sal.target_customer_id IS NOT NULL THEN CONCAT('CUST-', sal.target_customer_id)
-                ELSE NULL 
-            END AS customerFormattedId,
-            COALESCE(pc.name, ic.name) AS customerName,
-            sal.ip_address AS ipAddress
+        SELECT
+        sal.audit_id AS auditId,
+        DATE_FORMAT(sal.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+        sal.sales_user_id AS salesUserId,
+        su.name AS employeeName,
+        cc.code_name AS actionName,
+        -- CONVERSION_STATUS에 따른 식별 코드 분기 포맷팅 (예: 잠재고객은 CUST-, 통합고객은 INT- 등)
+        CASE
+        WHEN sal.target_customer_id IS NOT NULL AND sal.conversion_status_code = '01' THEN CONCAT('CUST-', sal.target_customer_id)
+        WHEN sal.target_customer_id IS NOT NULL AND sal.conversion_status_code = '02' THEN CONCAT('INT-', sal.target_customer_id)
+        ELSE NULL
+        END AS customerFormattedId,
+        -- CONVERSION_STATUS에 따라 조인된 올바른 테이블에서 고객명을 수집
+        CASE
+        WHEN sal.conversion_status_code = '01' THEN pc.name
+        WHEN sal.conversion_status_code = '02' THEN ic.name
+        ELSE NULL
+        END AS customerName,
+        sal.ip_address AS ipAddress
         FROM system_audit_log sal
         LEFT JOIN sales_user su ON sal.sales_user_id = su.id
         LEFT JOIN common_code cc ON cc.group_code = 'AUDIT_ACTION' AND cc.code_value = sal.action_type_code
-        LEFT JOIN potential_customer pc ON sal.target_customer_id = pc.id
-        LEFT JOIN integrated_customer ic ON sal.target_customer_id = ic.integrated_customer_id
+        -- conversion_status_code를 조인 조건에 명시하여 올바른 대상 테이블과 매핑
+        LEFT JOIN potential_customer pc ON sal.conversion_status_code = '01' AND sal.target_customer_id = pc.id
+        LEFT JOIN integrated_customer ic ON sal.conversion_status_code = '02' AND sal.target_customer_id = ic.integrated_customer_id
         <where>
             <if test="request.startDate != null and request.startDate != ''">
                 AND sal.created_at &gt;= STR_TO_DATE(CONCAT(#{request.startDate}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s')
