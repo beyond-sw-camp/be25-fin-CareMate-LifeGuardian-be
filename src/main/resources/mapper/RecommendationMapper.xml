@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.caremate.lifeguardian.recommendation.mapper.RecommendationMapper">
+
+    <select id="countCustomerBySalesUser" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM potential_customer
+        WHERE id = #{customerId}
+        AND sales_user_id = #{salesUserId}
+    </select>
+
+    <select id="findLatestWebform"
+            resultType="com.caremate.lifeguardian.recommendation.domain.WebformResponse">
+        SELECT
+        id,
+        customer_id AS customerId,
+        conversion_status_code AS conversionStatusCode,
+        height,
+        weight,
+        selected_priority_category AS selectedPriorityCategory,
+        history_json AS historyJson,
+        activity_json AS activityJson,
+        past_surgery_or_hospitalization AS pastSurgeryOrHospitalization,
+        desired_budget_code AS desiredBudgetCode,
+        received_at AS receivedAt
+        FROM webform_response
+        WHERE customer_id = #{customerId}
+        ORDER BY received_at DESC
+        LIMIT 1
+    </select>
+
+    <select id="findCustomerInfo"
+            resultType="com.caremate.lifeguardian.recommendation.dto.CustomerInfoDto">
+        SELECT
+        id AS customerId,
+        name,
+        birth_date AS birthDate,
+        gender,
+        sales_user_id AS salesUserId
+        FROM potential_customer
+        WHERE id = #{customerId}
+    </select>
+
+    <select id="findCategoryScores"
+            resultType="com.caremate.lifeguardian.recommendation.dto.CategoryScoreDto">
+        SELECT
+        target_category_code AS categoryCode,
+        SUM(weight_score) AS score
+        FROM question_mapping
+        WHERE option_value IN
+        <foreach collection="answerCodes" item="answer" open="(" separator="," close=")">
+            #{answer}
+        </foreach>
+        GROUP BY target_category_code
+    </select>
+
+    <select id="findCandidateCoverages"
+            resultType="com.caremate.lifeguardian.recommendation.dto.CoverageCandidateDto">
+        SELECT
+        id AS coverageId,
+        category_code AS categoryCode,
+        coverage_name AS coverageName,
+        unit_premium AS unitPremium,
+        danger_priority_order AS dangerPriorityOrder
+        FROM insurance_coverage
+        WHERE category_code IN
+        <foreach collection="categoryCodes" item="code" open="(" separator="," close=")">
+            #{code}
+        </foreach>
+        AND #{age} BETWEEN min_target_age AND max_target_age
+    </select>
+
+    <select id="findDiseaseRanks"
+            resultType="com.caremate.lifeguardian.recommendation.dto.DiseaseRankDto">
+        SELECT
+        data_year AS dataYear,
+        rank_by_age_gender AS rankByAgeGender
+        FROM cdc_disease_statistic
+        WHERE target_coverage_id = #{coverageId}
+        AND age_group_code = #{ageGroupCode}
+        AND gender = #{gender}
+        ORDER BY data_year DESC
+    </select>
+
+    <select id="findCategoryNameByCode"
+            resultType="java.lang.String">
+        SELECT category_name
+        FROM insurance_category
+        WHERE category_code = #{categoryCode}
+        AND is_active = TRUE
+        LIMIT 1
+    </select>
+
+    <insert id="insertInsurancePlan"
+            parameterType="com.caremate.lifeguardian.recommendation.domain.InsurancePlan"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO insurance_plan (
+        webform_response_id,
+        plan_name,
+        total_premium,
+        script_data,
+        recommendation_type_code
+        )
+        VALUES (
+        #{webformResponseId},
+        #{planName},
+        #{totalPremium},
+        #{scriptData},
+        #{recommendationTypeCode}
+        )
+    </insert>
+
+    <insert id="insertPlanCoverages">
+        INSERT INTO insurance_plan_coverage (
+        plan_id,
+        coverage_id,
+        selected_order,
+        applied_premium
+        )
+        VALUES
+        <foreach collection="coverages" item="coverage" separator=",">
+            (
+            #{planId},
+            #{coverage.coverageId},
+            #{coverage.selectedOrder},
+            #{coverage.unitPremium}
+            )
+        </foreach>
+    </insert>
+
+    <insert id="insertRecommendationLog"
+            parameterType="com.caremate.lifeguardian.recommendation.domain.RecommendationLog">
+        INSERT INTO recommendation_log (
+        potential_customer_id,
+        target_insured_type,
+        webform_response_id,
+        sales_user_id,
+        recommended_category_code,
+        total_score,
+        recommend_reason,
+        script_data,
+        insurance_plan_id
+        )
+        VALUES (
+        #{potentialCustomerId},
+        #{targetInsuredType},
+        #{webformResponseId},
+        #{salesUserId},
+        #{recommendedCategoryCode},
+        #{totalScore},
+        #{recommendReason},
+        #{scriptData},
+        #{insurancePlanId}
+        )
+    </insert>
+
+    <select id="findLatestRecommendation"
+            resultType="com.caremate.lifeguardian.recommendation.dto.response.RecommendationResponse">
+        SELECT
+        ip.id AS planId,
+        ip.plan_name AS planName,
+        ip.total_premium AS totalPremium,
+        rl.total_score AS totalScore,
+        rl.recommend_reason AS recommendReason
+        FROM insurance_plan ip
+        JOIN webform_response wr
+        ON ip.webform_response_id = wr.id
+        LEFT JOIN recommendation_log rl
+        ON rl.insurance_plan_id = ip.id
+        WHERE wr.customer_id = #{customerId}
+        ORDER BY ip.created_at DESC
+        LIMIT 1
+    </select>
+
+    <select id="findCoveragesByPlanId"
+            resultType="com.caremate.lifeguardian.recommendation.dto.response.CoverageResponse">
+        SELECT
+        ic.id AS coverageId,
+        ic.coverage_name AS coverageName,
+        ic.category_code AS categoryCode,
+        ipc.applied_premium AS premium,
+        ipc.selected_order AS selectedOrder
+        FROM insurance_plan_coverage ipc
+        JOIN insurance_coverage ic
+        ON ipc.coverage_id = ic.id
+        WHERE ipc.plan_id = #{planId}
+        ORDER BY ipc.selected_order ASC
+    </select>
+
+</mapper>
