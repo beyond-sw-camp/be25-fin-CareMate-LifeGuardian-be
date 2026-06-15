@@ -1,8 +1,4 @@
 package com.caremate.lifeguardian.report.mapper;
-
-import com.caremate.lifeguardian.report.dto.internal.ActionItemInsertDto;
-import com.caremate.lifeguardian.report.dto.internal.ReportSendAuditLogDto;
-import com.caremate.lifeguardian.report.dto.internal.ReportTargetDto;
 import com.caremate.lifeguardian.report.dto.internal.data.DiseaseRiskItemDto;
 import com.caremate.lifeguardian.report.dto.internal.data.GrowthStandardDto;
 import com.caremate.lifeguardian.report.dto.internal.data.ReportCustomerInfoDto;
@@ -11,7 +7,6 @@ import com.caremate.lifeguardian.report.dto.request.CustomerReportInsertDto;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
