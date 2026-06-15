@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -59,6 +58,7 @@ public class SecurityConfig {
                                 "/api/v1/sales-users",
                                 "/api/v1/sales-users/*",
                                 "/api/v1/sales-users/*/status",
+                                "/api/v1/sales/performance/*",
                                 "/api/v1/sales-users/*/transfer-customers",
                                 "/api/v1/sales-users/pii-secure",
                                 "/api/v1/branches/*/statistics/annual-contracts",
@@ -75,6 +75,8 @@ public class SecurityConfig {
                                 "/api/v1/potential-customers/parent/search",
                                 "/api/v1/potential-customers/{potentialCustomerId}",
                                 "/api/v1/auth/login",
+                                "/api/v1/reports/**",
+                                "/api/v1/customer-reports/send/**",
                                 "/oauth2/**",                   // OAuth2 리다이렉트 경로
                                 "/v3/api-docs/**",              // Swagger용
                                 "/swagger-ui/**"                // Swagger UI용
