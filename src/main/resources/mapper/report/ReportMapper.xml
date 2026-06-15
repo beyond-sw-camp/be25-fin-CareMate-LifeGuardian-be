@@ -1,0 +1,149 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.caremate.lifeguardian.report.mapper.ReportMapper">
+
+    <!-- 리포트 | 생성 후 디비 insert -->
+    <insert id="insertCustomerReport" parameterType="CustomerReportInsertDto"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO customer_report(
+            customer_id,
+            conversion_status_code,
+            action_item_id,
+            report_type_code,
+            report_url,
+            send_status_code
+        )
+
+        VALUES (
+                   #{customerId},
+                   #{conversionStatusCode},
+                   #{actionItemId},
+                   #{reportTypeCode},
+                   #{reportUrl},
+                   #{sendStatusCode}
+               )
+    </insert>
+
+    <!-- 리포트 | 고객 및 보호자 기본정보 -->
+    <select id="selectReportCustomerInfo"
+            resultType="com.caremate.lifeguardian.report.dto.internal.data.ReportCustomerInfoDto">
+        SELECT
+            pc.id AS customerId,
+            pc.name AS childName,
+            pc.birth_date AS childBirthDate,
+            TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) AS childAge,
+            TIMESTAMPDIFF(MONTH, pc.birth_date, CURDATE()) AS childAgeMonth,
+            parent.integrated_customer_id AS parentCustomerId,
+            parent.name AS parentName,
+            TIMESTAMPDIFF(YEAR, parent.birth_date, CURDATE()) AS parentAge,
+            parent.phone AS parentPhone,
+            parent.address AS parentAddress,
+            pc.gender AS childGender,
+            pc.relationship_code AS relationCode,
+            relation_code.code_name AS relationName
+        FROM potential_customer pc
+        INNER JOIN integrated_customer parent
+            ON parent.integrated_customer_id = pc.parent_customer_id
+        LEFT JOIN common_code relation_code
+            ON relation_code.group_code = 'RELATIONSHIP'
+           AND relation_code.code_value = pc.relationship_code
+        WHERE #{conversionStatusCode} = '01'
+          AND pc.id = #{customerId}
+
+        UNION ALL
+
+        SELECT
+            child.integrated_customer_id AS customerId,
+            child.name AS childName,
+            child.birth_date AS childBirthDate,
+            TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) AS childAge,
+            TIMESTAMPDIFF(MONTH, child.birth_date, CURDATE()) AS childAgeMonth,
+            parent.integrated_customer_id AS parentCustomerId,
+            parent.name AS parentName,
+            TIMESTAMPDIFF(YEAR, parent.birth_date, CURDATE()) AS parentAge,
+            parent.phone AS parentPhone,
+            parent.address AS parentAddress,
+            child.gender AS childGender,
+            NULL AS relationCode,
+            '보호자' AS relationName
+        FROM integrated_customer child
+        LEFT JOIN integrated_customer parent
+            ON parent.integrated_customer_id = child.parent_id
+        WHERE #{conversionStatusCode} = '02'
+          AND child.integrated_customer_id = #{customerId}
+    </select>
+
+    <!-- 리포트 | 웹폼 상세정보 -->
+    <select id="selectReportWebform"
+            resultType="com.caremate.lifeguardian.report.dto.internal.data.ReportWebformDto">
+        SELECT
+            wr.id AS webFormId,
+            wr.height,
+            wr.weight,
+            wr.selected_priority_category AS selectedPriorityCategory,
+            wr.history_json AS historyJson,
+            wr.activity_json AS activityJson,
+            wr.past_surgery_or_hospitalization AS pastSurgeryOrHospitalization,
+            wr.desired_budget_code AS desiredBudgetCode,
+            wr.received_at AS receivedAt
+        FROM webform_response wr
+        WHERE wr.id = #{webFormId}
+    </select>
+
+    <!-- 리포트 | 성장 백분위 그래프 기준 -->
+    <select id="selectGrowthStandards"
+            resultType="com.caremate.lifeguardian.report.dto.internal.data.GrowthStandardDto">
+        SELECT
+            cgs.age AS ageMonth,
+            cgs.height_p5 AS heightP5,
+            cgs.height_p50 AS heightP50,
+            cgs.height_p95 AS heightP95,
+            cgs.weight_p5 AS weightP5,
+            cgs.weight_p50 AS weightP50,
+            cgs.weight_p95 AS weightP95
+        FROM cdc_growth_standard cgs
+        WHERE TRIM(cgs.gender) IN (
+            #{gender},
+            CASE #{gender}
+                WHEN 'MALE' THEN 'M'
+                WHEN 'FEMALE' THEN 'F'
+                ELSE #{gender}
+            END
+        )
+          AND cgs.age BETWEEN #{minAge} AND #{maxAge}
+        ORDER BY cgs.age
+    </select>
+
+    <!-- 리포트 | 연령대별 질병 및 상해 위험 -->
+    <select id="selectDiseaseRisks"
+            resultType="com.caremate.lifeguardian.report.dto.internal.data.DiseaseRiskItemDto">
+        SELECT
+            cds.disease_code AS diseaseCode,
+            cds.disease_name AS diseaseName,
+            cds.treatment_type AS treatmentType,
+            cds.patient_count AS patientCount,
+            cds.rank_by_age_gender AS `rank`,
+            category.category_code AS categoryCode,
+            category.category_name AS categoryName,
+            coverage.coverage_name AS coverageName
+        FROM cdc_disease_statistic cds
+        LEFT JOIN insurance_coverage coverage
+            ON coverage.id = cds.target_coverage_id
+        LEFT JOIN insurance_category category
+            ON category.category_code = coverage.category_code
+        WHERE cds.data_year = (
+            SELECT MAX(latest.data_year)
+            FROM cdc_disease_statistic latest
+            WHERE TRIM(latest.age_group_code) = #{ageGroupCode}
+        )
+          AND TRIM(cds.age_group_code) = #{ageGroupCode}
+          AND (cds.gender = #{gender} OR cds.gender = 'ALL')
+        ORDER BY
+            CASE WHEN cds.gender = #{gender} THEN 0 ELSE 1 END,
+            cds.rank_by_age_gender,
+            cds.patient_count DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

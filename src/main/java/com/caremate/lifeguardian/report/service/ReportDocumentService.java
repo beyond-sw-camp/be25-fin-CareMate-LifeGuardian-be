@@ -7,26 +7,47 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Locale;
+import java.util.Map;
 
+/**
+ * 리포트 템플릿을 렌더링하고 PDF 바이트 배열로 변환한다.
+ */
 @Service
-public class ReportPdfServiceImpl {
+public class ReportDocumentService {
 
+    private final TemplateEngine templateEngine;
     private final ResourceLoader resourceLoader;
     private final String fontLocation;
 
-    public ReportPdfServiceImpl(
+    public ReportDocumentService(
+            TemplateEngine templateEngine,
             ResourceLoader resourceLoader,
             @Value("${app.report.pdf.font-location:}") String fontLocation
     ) {
+        this.templateEngine = templateEngine;
         this.resourceLoader = resourceLoader;
         this.fontLocation = fontLocation;
     }
 
-    public byte[] convertToPdf(String html) {
+    public byte[] renderPdf(String templateName, Map<String, Object> variables) {
+        String html = renderHtml(templateName, variables);
+        return convertToPdf(html);
+    }
+
+    private String renderHtml(String templateName, Map<String, Object> variables) {
+        Context context = new Context(Locale.KOREAN);
+        context.setVariables(variables);
+        return templateEngine.process("reports/" + templateName, context);
+    }
+
+    private byte[] convertToPdf(String html) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();

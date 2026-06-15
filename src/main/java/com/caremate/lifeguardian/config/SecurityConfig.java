@@ -76,7 +76,8 @@ public class SecurityConfig {
                                 "/api/v1/potential-customers/parent/search",
                                 "/api/v1/potential-customers/{potentialCustomerId}",
                                 "/api/v1/auth/login",
-                                "/api/v1/reports/preview/r2",
+                                "/api/v1/reports/**",
+                                "/api/v1/customer-reports/send/**",
                                 "/oauth2/**",                   // OAuth2 리다이렉트 경로
                                 "/v3/api-docs/**",              // Swagger용
                                 "/swagger-ui/**"                // Swagger UI용

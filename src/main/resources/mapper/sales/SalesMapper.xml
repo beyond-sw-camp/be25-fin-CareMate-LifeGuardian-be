@@ -28,8 +28,7 @@
                  s.target_contract_count;
     </select>
 
-    <select id="countSalesList"
-            resultType="long">
+    <select id="countSalesList" resultType="long">
         WITH customer_base AS (
             SELECT
                 pc.id AS customer_id,
@@ -156,7 +155,6 @@
                 pc.birth_date,
                 pc.sales_user_id,
                 pc.consult_status_code,
-                pc.insurance_age_shift_date,
                 pc.created_at
         FROM potential_customer pc
         WHERE pc.conversion_status_code = '01'
@@ -172,7 +170,6 @@
             ic.birth_date,
             ic.sales_user_id,
             NULL AS consult_status_code,
-            ic.insurance_age_shift_date,
             ic.created_at
             FROM integrated_customer ic
             WHERE ic.sales_user_id = #{currentUserId}
@@ -277,7 +274,9 @@
             lw.received_at AS webform_received_at,
 
             lr.id AS report_id,
+            lr.report_url,
             lr.send_status_code,
+            lr.sent_at AS report_sent_at,
 
             rts.trigger_type_code AS three_step_code,
             rts.target_date AS three_step_target_date
@@ -297,12 +296,9 @@
         customer_page AS (
         SELECT
             ce.*,
-            DATEDIFF(ce.insurance_age_shift_date, CURDATE()) AS age_increase_d_day,
-
         CASE
-            WHEN DATEDIFF(ce.insurance_age_shift_date, CURDATE()) BETWEEN 0 AND 30 THEN 1
-            WHEN ce.three_step_code IS NOT NULL THEN 2
-            WHEN ce.webform_id IS NOT NULL THEN 3
+            WHEN ce.three_step_code IS NOT NULL THEN 1
+            WHEN ce.webform_id IS NOT NULL THEN 2
             ELSE 9
         END AS sort_rank
 
@@ -358,7 +354,6 @@
 
         ORDER BY
             sort_rank ASC,
-            age_increase_d_day ASC,
             ce.three_step_target_date ASC,
             ce.created_at DESC
 
@@ -379,9 +374,6 @@
             WHEN '01' THEN '잠재 고객'
             WHEN '02' THEN '통합 고객'
         END AS customerStageName,
-
-        cp.insurance_age_shift_date AS insuranceAgeShiftDate,
-        cp.age_increase_d_day AS ageIncreaseDDay,
 
         cp.three_step_code AS threeStepCode,
         COALESCE(trigger_code.code_name, '-') AS threeStepName,
@@ -408,12 +400,16 @@
         END,
         cp.customer_name) AS insuredName,
 
+        cp.webform_id AS webFormId,
+
         CASE
             WHEN cp.webform_id IS NULL THEN '-'
             ELSE DATE_FORMAT(cp.webform_received_at, '%Y/%m/%d')
         END AS webformReceivedAt,
 
         cp.report_id AS reportId,
+
+        cp.report_url AS reportUrl,
 
         CASE
             WHEN cp.report_id IS NULL THEN FALSE
@@ -427,9 +423,11 @@
             ELSE COALESCE(send_code.code_name, '미발송')
         END AS reportStatusName,
 
+        cp.report_sent_at AS reportSentAt,
+
         CASE
-            WHEN cp.report_id IS NULL OR cp.send_status_code != '02' THEN TRUE
-            ELSE FALSE
+            WHEN cp.report_id IS NULL THEN FALSE
+            ELSE TRUE
         END AS canSendReport,
 
         cp.sort_rank AS sortRank
@@ -459,7 +457,6 @@
 
         ORDER BY
         cp.sort_rank ASC,
-        cp.age_increase_d_day ASC,
         cp.three_step_target_date ASC,
         cp.created_at DESC
 

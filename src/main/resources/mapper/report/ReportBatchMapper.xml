@@ -1,0 +1,102 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.caremate.lifeguardian.report.mapper.ReportBatchMapper">
+
+    <!-- 리포트 배치 | 리포트 생성대상 조회 -->
+    <select id="selectReportTargets"
+            resultType="com.caremate.lifeguardian.report.dto.internal.ReportTargetDto">
+        SELECT pc.id AS customerId ,
+               pc.`name` AS name ,
+               pc.sales_user_id AS currentUserId,
+               '01' AS conversionStatusCode,
+               wr.id AS webFormId,
+               CASE
+                   WHEN wr.id IS NULL THEN '02' -- 질병통계 리포트
+                   ELSE '01' -- 성장리포트
+                   END AS reportTypeCode,
+               #{reportYear} AS reportYear
+        FROM potential_customer pc
+                 LEFT JOIN webform_response wr
+                           ON wr.id = (
+                               SELECT wr2.id
+                               FROM webform_response wr2
+                               WHERE wr2.customer_id = pc.id
+                                         AND wr2.conversion_status_code = '01'
+                                         AND YEAR(wr2.received_at) = #{reportYear}
+        ORDER BY wr2.received_at DESC, wr2.id DESC
+            LIMIT 1
+            )
+            AND wr.conversion_status_code = '01'
+            AND YEAR(wr.received_at) = #{reportYear}
+        WHERE pc.conversion_status_code = '01' -- 잠재고객
+          AND pc.sales_user_id IS NOT NULL -- 웹폼 제출, 미체출 선별
+          AND NOT EXISTS (
+            SELECT 1
+            FROM customer_report cr
+            WHERE cr.customer_id = pc.id
+          AND cr.conversion_status_code = '01' -- 발송
+          AND cr.report_type_code =
+            CASE
+            WHEN wr.id IS NULL then '02'
+            ELSE '01'
+            END
+          AND YEAR(cr.created_at) = #{reportYear}
+            )
+
+        UNION all
+
+        SELECT ic.integrated_customer_id AS customerId,
+               ic.`name` AS name,
+               ic.sales_user_id AS currentUserId,
+               '02' AS conversionStatusCode,
+               wr.id AS webFormId,
+               '01' AS reportTypeCode,
+               #{reportYear} AS reportYear
+        FROM integrated_customer ic
+                 INNER JOIN webform_response wr
+                            ON wr.id = (
+                                SELECT wr2.id
+                                FROM webform_response wr2
+                                WHERE wr2.customer_id = ic.integrated_customer_id
+                                          AND conversion_status_code = '02'
+                                          AND YEAR(wr2.received_at) = #{reportYear}
+        ORDER BY wr2.received_at DESC, wr2.id DESC
+            LIMIT 1
+            )
+            AND wr.conversion_status_code = '02'
+            AND YEAR(wr.received_at) = #{reportYear}
+        where ic.sales_user_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM customer_report cr
+            WHERE cr.customer_id = ic.integrated_customer_id
+          AND cr.conversion_status_code = '02'
+          AND cr.report_type_code = '01'
+          AND YEAR(cr.created_at) = #{reportYear}
+            );
+    </select>
+
+    <!-- 리포트 배치 | 생성사유 액션아이템 추가 -->
+    <insert id="insertActionItem"
+            parameterType="com.caremate.lifeguardian.report.dto.internal.ActionItemInsertDto"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO daily_action_item (
+            sales_user_id,
+            customer_id,
+            trigger_type_code,
+            priority_score,
+            target_date,
+            conversion_status_code
+        )
+        VALUES (
+                   #{currentUserId},
+                   #{customerId},
+                   #{triggerTypeCode},
+                   #{priorityScore},
+                   #{targetDate},
+                   #{conversionStatusCode}
+               )
+    </insert>
+
+</mapper>

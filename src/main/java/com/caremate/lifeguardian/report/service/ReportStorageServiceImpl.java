@@ -15,6 +15,9 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.time.LocalDate;
 import java.util.UUID;
 
+/**
+ * 생성된 리포트 PDF를 객체 저장소에 업로드하고 접근 URL을 반환한다.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -25,6 +28,9 @@ public class ReportStorageServiceImpl {
     private final S3Client s3Client;
     private final ReportStorageProperties properties;
 
+    /**
+     * 고객별 고유 객체 키로 PDF를 업로드한다.
+     */
     public String uploadPdf(byte[] pdfBytes, Long customerId) {
         String objectKey = createObjectKey(customerId);
 
