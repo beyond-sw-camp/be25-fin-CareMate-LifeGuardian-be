@@ -247,7 +247,7 @@ public class ReportDataServiceImpl {
                 ageMonth
         );
         if (!current.isEmpty()) {
-            standards.add(current.get(0));
+            standards.add(current.getFirst());
             standards.sort(java.util.Comparator.comparing(GrowthStandardDto::getAgeMonth));
         }
     }

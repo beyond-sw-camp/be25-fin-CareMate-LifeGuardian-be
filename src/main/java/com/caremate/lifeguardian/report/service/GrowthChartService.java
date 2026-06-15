@@ -26,6 +26,9 @@ public class GrowthChartService {
 
     private static final int WIDTH = 1100;
     private static final int COMBINED_HEIGHT = 660;
+    private static final int COMBINED_PANEL_HEIGHT = 235;
+    private static final int COMBINED_X_AXIS_Y = 561;
+    private static final int COMBINED_LEGEND_Y = 635;
     private static final int HEIGHT = 470;
     private static final int LEFT = 138;
     private static final int RIGHT = 64;
@@ -52,21 +55,21 @@ public class GrowthChartService {
             graphics.drawString("월령별 성장 백분위 곡선", LEFT, 32);
 
             drawCombinedPanel(
-                    graphics, standards, 58, 235, "키", "cm",
+                    graphics, standards, 58, "키", "cm",
                     GrowthStandardDto::getHeightP5,
                     GrowthStandardDto::getHeightP50,
                     GrowthStandardDto::getHeightP95,
                     GrowthStandardDto::getChildHeight
             );
             drawCombinedPanel(
-                    graphics, standards, 326, 235, "몸무게", "kg",
+                    graphics, standards, 326, "몸무게", "kg",
                     GrowthStandardDto::getWeightP5,
                     GrowthStandardDto::getWeightP50,
                     GrowthStandardDto::getWeightP95,
                     GrowthStandardDto::getChildWeight
             );
-            drawCombinedXAxis(graphics, standards, 561);
-            drawLegendAt(graphics, 635);
+            drawCombinedXAxis(graphics, standards);
+            drawLegendAt(graphics);
 
             try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
                 ImageIO.write(image, "png", output);
@@ -84,7 +87,6 @@ public class GrowthChartService {
             Graphics2D graphics,
             List<GrowthStandardDto> standards,
             int top,
-            int panelHeight,
             String label,
             String unit,
             Function<GrowthStandardDto, BigDecimal> p5Value,
@@ -92,6 +94,7 @@ public class GrowthChartService {
             Function<GrowthStandardDto, BigDecimal> p95Value,
             Function<GrowthStandardDto, BigDecimal> childValue
     ) {
+        int panelHeight = COMBINED_PANEL_HEIGHT;
         double minValue = standards.stream().map(p5Value)
                 .mapToDouble(BigDecimal::doubleValue).min().orElse(0);
         double maxValue = standards.stream().map(p95Value)
@@ -237,28 +240,26 @@ public class GrowthChartService {
 
     private void drawCombinedXAxis(
             Graphics2D graphics,
-            List<GrowthStandardDto> standards,
-            int y
+            List<GrowthStandardDto> standards
     ) {
         graphics.setFont(new Font("SansSerif", Font.PLAIN, 13));
         graphics.setColor(new Color(92, 101, 118));
         for (int index = 0; index < standards.size(); index++) {
-            if (!shouldShowAgeTick(standards, index)) {
-                continue;
+            if (shouldShowAgeTick(standards, index)) {
+                int ageMonth = standards.get(index).getAgeMonth();
+                String label = formatCompactAgeMonth(ageMonth);
+                int pointX = combinedX(index, standards.size());
+                graphics.drawString(label,
+                        pointX - graphics.getFontMetrics().stringWidth(label) / 2,
+                        COMBINED_X_AXIS_Y + 22);
             }
-            int ageMonth = standards.get(index).getAgeMonth();
-            String label = formatCompactAgeMonth(ageMonth);
-            int pointX = combinedX(index, standards.size());
-            graphics.drawString(label,
-                    pointX - graphics.getFontMetrics().stringWidth(label) / 2,
-                    y + 22);
         }
         graphics.setFont(new Font("SansSerif", Font.BOLD, 14));
         String axisTitle = "월령";
         graphics.drawString(
                 axisTitle,
                 LEFT + (WIDTH - LEFT - RIGHT - graphics.getFontMetrics().stringWidth(axisTitle)) / 2,
-                y + 48
+                COMBINED_X_AXIS_Y + 48
         );
     }
 
@@ -279,8 +280,8 @@ public class GrowthChartService {
                 .orElse(Integer.MIN_VALUE);
 
         int ageMonth = standard.getAgeMonth();
-        int firstAgeMonth = standards.get(0).getAgeMonth();
-        int lastAgeMonth = standards.get(standards.size() - 1).getAgeMonth();
+        int firstAgeMonth = standards.getFirst().getAgeMonth();
+        int lastAgeMonth = standards.getLast().getAgeMonth();
 
         return ageMonth % 6 == 0
                 && Math.abs(ageMonth - currentAgeMonth) >= 4
@@ -288,12 +289,12 @@ public class GrowthChartService {
                 && lastAgeMonth - ageMonth >= 4;
     }
 
-    private void drawLegendAt(Graphics2D graphics, int y) {
+    private void drawLegendAt(Graphics2D graphics) {
         graphics.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        drawLegendItem(graphics, 285, y, new Color(65, 177, 132), "95백분위");
-        drawLegendItem(graphics, 430, y, new Color(82, 113, 225), "50백분위");
-        drawLegendItem(graphics, 575, y, new Color(236, 167, 50), "5백분위");
-        drawLegendItem(graphics, 710, y, new Color(225, 72, 77), "고객 측정값");
+        drawLegendItem(graphics, 285, COMBINED_LEGEND_Y, new Color(65, 177, 132), "95백분위");
+        drawLegendItem(graphics, 430, COMBINED_LEGEND_Y, new Color(82, 113, 225), "50백분위");
+        drawLegendItem(graphics, 575, COMBINED_LEGEND_Y, new Color(236, 167, 50), "5백분위");
+        drawLegendItem(graphics, 710, COMBINED_LEGEND_Y, new Color(225, 72, 77), "고객 측정값");
     }
 
     private int combinedX(int index, int size) {
@@ -324,6 +325,7 @@ public class GrowthChartService {
         return years + "세" + months + "개월";
     }
 
+    @SuppressWarnings("unused")
     public String createHeightChart(List<GrowthStandardDto> standards) {
         return createChart(
                 standards,
@@ -336,6 +338,7 @@ public class GrowthChartService {
         );
     }
 
+    @SuppressWarnings("unused")
     public String createWeightChart(List<GrowthStandardDto> standards) {
         return createChart(
                 standards,
@@ -545,7 +548,7 @@ public class GrowthChartService {
             double minValue,
             double maxValue
     ) {
-        GrowthStandardDto last = standards.get(standards.size() - 1);
+        GrowthStandardDto last = standards.getLast();
         int labelX = WIDTH - RIGHT + 9;
         graphics.setFont(new Font("SansSerif", Font.BOLD, 13));
         drawCurveLabel(graphics, "P95", labelX,

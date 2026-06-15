@@ -1,6 +1,5 @@
 package com.caremate.lifeguardian.scheduler.report;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
@@ -22,7 +21,6 @@ import java.time.ZoneId;
 @Slf4j
 @Component
 @EnableScheduling
-@RequiredArgsConstructor
 @ConditionalOnProperty(
         prefix = "app.report.batch",
         name = "enabled",
@@ -36,6 +34,14 @@ public class ReportBatchScheduler {
 
     @Qualifier(ReportBatchConfiguration.JOB_NAME)
     private final Job customerReportCreationJob;
+
+    public ReportBatchScheduler(
+            JobLauncher jobLauncher,
+            @Qualifier(ReportBatchConfiguration.JOB_NAME) Job customerReportCreationJob
+    ) {
+        this.jobLauncher = jobLauncher;
+        this.customerReportCreationJob = customerReportCreationJob;
+    }
 
     @Scheduled(
             cron = "${app.report.batch.cron:0 0 2 * * *}",

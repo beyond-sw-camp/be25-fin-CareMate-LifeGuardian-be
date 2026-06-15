@@ -10,7 +10,7 @@
                s.target_contract_count  AS targetCount,
                COUNT(c.id) AS contractCount,
                case
-                   when s.target_contract_count IS NULL OR s.target_contract_count = 0 THEN 0
+                   when s.target_contract_count = 0 THEN 0
                     ELSE ROUND(count(c.contract_result_status_code) / s.target_contract_count * 100, 1)
                    END AS achievementRate
         FROM sales_monthly_target s

@@ -30,7 +30,6 @@
             AND wr.conversion_status_code = '01'
             AND YEAR(wr.received_at) = #{reportYear}
         WHERE pc.conversion_status_code = '01' -- 잠재고객
-          AND pc.sales_user_id IS NOT NULL -- 웹폼 제출, 미체출 선별
           AND NOT EXISTS (
             SELECT 1
             FROM customer_report cr
