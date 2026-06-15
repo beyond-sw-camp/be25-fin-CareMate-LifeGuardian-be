@@ -105,7 +105,6 @@ public class ReportServiceImpl implements ReportService {
             throw new BaseException(404, "발송 가능한 고객 리포트가 없습니다.");
         }
         int successCount = 0;
-        int skippedCount = 0;
         int failedCount = 0;
         LocalDateTime sentAt = LocalDateTime.now();
 
@@ -127,7 +126,7 @@ public class ReportServiceImpl implements ReportService {
         return ReportBulkSendResultDto.builder()
                 .requestedCount(targets.size())
                 .successCount(successCount)
-                .skippedCount(skippedCount)
+                .skippedCount(0)
                 .failedCount(failedCount)
                 .sentAt(sentAt)
                 .build();

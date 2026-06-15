@@ -82,5 +82,5 @@ app:
       font-location: ${REPORT_PDF_FONT_LOCATION:classpath:/fonts/Pretendard-Regular.ttf}
     batch:
       enabled: ${REPORT_BATCH_ENABLED:true} # 활성화 여부
-      cron: ${REPORT_BATCH_CRON:0 0 3 * * *} # 배치 시간
+      cron: ${REPORT_BATCH_CRON:0 0 3 * * *} # 배치 시간 새벽3시
       zone: ${REPORT_BATCH_ZONE:Asia/Seoul}
