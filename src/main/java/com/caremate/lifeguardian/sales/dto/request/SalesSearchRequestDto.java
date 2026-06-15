@@ -13,9 +13,6 @@ import java.util.List;
 @Setter
 public class SalesSearchRequestDto {
 
-    // 서버에서 로그인 사용자 ID로 덮어쓰는 값이다.
-    private Long salesUserId;
-
     // 고객명 부분 검색 조건
     private String customerName;
 

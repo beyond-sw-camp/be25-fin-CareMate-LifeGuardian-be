@@ -5,6 +5,7 @@ import lombok.Setter;
 import org.apache.ibatis.type.Alias;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -26,11 +27,6 @@ public class SalesListResponseDto {
     private String customerStageCode;
 
     private String customerStageName;
-
-    // 상령일
-    private LocalDate insuranceAgeShiftDate; // 상령일 날짜
-
-    private Integer ageIncreaseDDay; // 상령일까지 남은 일수
 
     // 3Step
     private String threeStepCode;
@@ -55,17 +51,23 @@ public class SalesListResponseDto {
     // 피보험자
     private String insuredName;
 
+    private Long webFormId;
+
     // 웹폼 회수일
     private String webformReceivedAt;
 
     // 리포트
     private Long reportId;
 
+    private String reportUrl;
+
     private Boolean hasReport; // 존재 여부
 
     private String reportStatusCode;
 
     private String reportStatusName;
+
+    private LocalDateTime reportSentAt;
 
     private Boolean canSendReport; // 리포트 버튼
 
