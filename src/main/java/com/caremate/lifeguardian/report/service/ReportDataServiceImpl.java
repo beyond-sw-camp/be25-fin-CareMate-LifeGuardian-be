@@ -66,6 +66,8 @@ public class ReportDataServiceImpl {
         ));
 
         List<GrowthStandardDto> growthStandards = List.of();
+        String heightSummary = null;
+        String weightSummary = null;
 
         if (webform != null && GROWTH_REPORT_TYPE.equals(target.getReportTypeCode())) {
             int ageMonth = customer.getChildAgeMonth();
@@ -78,6 +80,10 @@ public class ReportDataServiceImpl {
             );
             ensureCurrentMonthIncluded(growthStandards, customer.getChildGender(), ageMonth);
             prepareGrowthChart(growthStandards, webform, ageMonth);
+            heightSummary = createGrowthSummary(
+                    "키", webform.getHeight(), growthStandards, ageMonth, true);
+            weightSummary = createGrowthSummary(
+                    "몸무게", webform.getWeight(), growthStandards, ageMonth, false);
         }
 
         Map<String, Object> variables = new HashMap<>();
@@ -95,6 +101,8 @@ public class ReportDataServiceImpl {
                 : growthChartService.createCombinedChart(growthStandards));
         variables.put("currentRisks", currentRisks);
         variables.put("currentAgeGroupName", currentAgeGroup.displayName);
+        variables.put("heightSummary", heightSummary);
+        variables.put("weightSummary", weightSummary);
         return variables;
     }
 
@@ -176,6 +184,42 @@ public class ReportDataServiceImpl {
         standard.setWeightP50Width(toPercent(standard.getWeightP50(), weightMax));
         standard.setWeightP95Width(toPercent(standard.getWeightP95(), weightMax));
         standard.setChildWeightWidth(toPercent(standard.getChildWeight(), weightMax));
+    }
+
+    private String createGrowthSummary(
+            String label,
+            BigDecimal childValue,
+            List<GrowthStandardDto> standards,
+            int childAgeMonth,
+            boolean height
+    ) {
+        GrowthStandardDto standard = standards.stream()
+                .filter(item -> item.getAgeMonth() == childAgeMonth)
+                .findFirst()
+                .orElse(null);
+
+        if (standard == null || childValue == null) {
+            return label + "를 비교할 동일 연령·성별 성장 기준 데이터가 없습니다.";
+        }
+
+        BigDecimal p5 = height ? standard.getHeightP5() : standard.getWeightP5();
+        BigDecimal p50 = height ? standard.getHeightP50() : standard.getWeightP50();
+        BigDecimal p95 = height ? standard.getHeightP95() : standard.getWeightP95();
+
+        if (childValue.compareTo(p5) < 0) {
+            return "%s가 같은 성별·나이 또래 중 하위 5%%보다 %s 편입니다."
+                    .formatted(label, height ? "작은" : "적게 나가는");
+        }
+        if (childValue.compareTo(p50) < 0) {
+            return "%s가 같은 성별·나이 또래의 평균보다 %s 편입니다."
+                    .formatted(label, height ? "작은" : "적게 나가는");
+        }
+        if (childValue.compareTo(p95) <= 0) {
+            return "%s가 같은 성별·나이 또래의 평균보다 %s 편입니다."
+                    .formatted(label, height ? "큰" : "많이 나가는");
+        }
+        return "%s가 같은 성별·나이 또래 중 상위 5%%보다 %s 편입니다."
+                .formatted(label, height ? "큰" : "많이 나가는");
     }
 
     /**
