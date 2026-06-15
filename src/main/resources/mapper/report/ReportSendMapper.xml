@@ -1,0 +1,137 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.caremate.lifeguardian.report.mapper.ReportSendMapper">
+
+    <!-- 리포트 발송 | 개별 발송 대상 조회 -->
+    <select id="selectReportSendTarget"
+            resultType="com.caremate.lifeguardian.report.dto.internal.ReportSendTargetDto">
+        SELECT cr.id AS reportId,
+        cr.customer_id AS customerId,
+        cr.conversion_status_code AS conversionStatusCode,
+        CASE
+        WHEN cr.conversion_status_code = '01' THEN pc.name
+        WHEN cr.conversion_status_code = '02' THEN ic.name
+        END AS customerName,
+        cr.report_url AS reportUrl,
+        cr.send_status_code AS sendStatusCode
+        FROM customer_report cr
+        LEFT JOIN potential_customer pc
+        ON cr.conversion_status_code = '01'
+        AND pc.id = cr.customer_id
+        LEFT JOIN integrated_customer ic
+        ON cr.conversion_status_code = '02'
+        AND ic.integrated_customer_id = cr.customer_id
+        WHERE cr.customer_id = #{customerId}
+        <if test="conversionStatusCode != null and conversionStatusCode != ''">
+            AND cr.conversion_status_code = #{conversionStatusCode}
+        </if>
+        AND (
+        (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId})
+        OR
+        (
+        cr.conversion_status_code = '02'
+        AND ic.sales_user_id = #{currentUserId}
+        AND EXISTS (
+        SELECT 1
+        FROM webform_response wr
+        WHERE wr.customer_id = cr.customer_id
+        AND wr.conversion_status_code = '02'
+        )
+        )
+        )
+        ORDER BY cr.created_at DESC, cr.id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 리포트 발송 | 담당 잠재·통합 고객의 최신 리포트 전체 발송 대상 조회 -->
+    <select id="selectBulkReportSendTargets"
+            resultType="com.caremate.lifeguardian.report.dto.internal.ReportSendTargetDto">
+        SELECT reportId,
+               customerId,
+               conversionStatusCode,
+               customerName,
+               reportUrl,
+               sendStatusCode
+        FROM (
+                 SELECT cr.id AS reportId,
+                        cr.customer_id AS customerId,
+                        cr.conversion_status_code AS conversionStatusCode,
+                        CASE
+                            WHEN cr.conversion_status_code = '01' THEN pc.name
+                            WHEN cr.conversion_status_code = '02' THEN ic.name
+                            END AS customerName,
+                        cr.report_url AS reportUrl,
+                        cr.send_status_code AS sendStatusCode,
+                        ROW_NUMBER() OVER (
+                       PARTITION BY cr.conversion_status_code, cr.customer_id
+                       ORDER BY cr.created_at DESC, cr.id DESC
+                   ) AS rowNumber
+                 FROM customer_report cr
+                          LEFT JOIN potential_customer pc
+                                    ON cr.conversion_status_code = '01'
+                                        AND pc.id = cr.customer_id
+                          LEFT JOIN integrated_customer ic
+                                    ON cr.conversion_status_code = '02'
+                                        AND ic.integrated_customer_id = cr.customer_id
+                 WHERE (
+                     (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId})
+                         OR
+                     (
+                         cr.conversion_status_code = '02'
+                             AND ic.sales_user_id = #{currentUserId}
+                             AND EXISTS (
+                             SELECT 1
+                             FROM webform_response wr
+                             WHERE wr.customer_id = cr.customer_id
+                               AND wr.conversion_status_code = '02'
+                         )
+                         )
+                     )
+                   AND EXISTS (
+                     SELECT 1
+                     FROM daily_action_item dai
+                     WHERE dai.customer_id = cr.customer_id
+                       AND dai.conversion_status_code = cr.conversion_status_code
+                       AND dai.sales_user_id = #{currentUserId}
+                       AND dai.target_date = CURDATE()
+                       AND dai.is_completed = FALSE
+                 )
+             ) latest
+        WHERE rowNumber = 1
+        ORDER BY reportId
+    </select>
+
+    <!-- 리포트 발송 | 발송 성공 처리 -->
+    <update id="updateReportSentStatus">
+        UPDATE customer_report
+        SET send_status_code = '02',
+            sent_at = #{sentAt}
+        WHERE id = #{reportId}
+          AND send_status_code IN ('01', '02', '03')
+    </update>
+
+    <!-- 리포트 발송 | 발송 감사 로그 -->
+    <insert id="insertReportSendAuditLog"
+            parameterType="com.caremate.lifeguardian.report.dto.internal.ReportSendAuditLogDto">
+        INSERT INTO system_audit_log (
+            sales_user_id,
+            target_customer_id,
+            conversion_status_code,
+            action_type_code,
+            ip_address,
+            user_agent,
+            reason
+        )
+        VALUES (
+                   #{currentUserId},
+                   #{targetCustomerId},
+                   #{conversionStatusCode},
+                   #{actionTypeCode},
+                   #{ipAddress},
+                   #{userAgent},
+                   #{reason}
+               )
+    </insert>
+
+</mapper>

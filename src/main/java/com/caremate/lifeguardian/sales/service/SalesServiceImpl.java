@@ -75,18 +75,15 @@ public class SalesServiceImpl implements SalesService {
         // 검색 조건을 먼저 검증하고, 잘못된 값이 있으면 400 예외 발생
         validateSalesListRequest(currentUserId, request);
 
-        // 클라이언트가 전달한 salesUserId 대신 인증된 사용자 ID를 사용
-        request.setSalesUserId(currentUserId);
-
         try {
             // 검색 조건에 맞는 전체 고객 수를 조회해 페이지 정보를 계산
-            long totalCount = salesMapper.countSalesList(request);
+            long totalCount = salesMapper.countSalesList(currentUserId, request);
             int totalPages = (int) Math.ceil((double) totalCount / request.getSize());
 
             // 조회 결과가 없으면 목록 쿼리를 추가로 실행하지 않는다.
             List<SalesListResponseDto> content = totalCount == 0
                     ? Collections.emptyList()
-                    : salesMapper.getSalesList(request);
+                    : salesMapper.getSalesList(currentUserId, request);
 
             return SalesPageResponseDto.builder()
                     .page(request.getPage())
