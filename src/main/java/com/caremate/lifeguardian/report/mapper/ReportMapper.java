@@ -31,6 +31,7 @@ public interface ReportMapper {
     List<DiseaseRiskItemDto> selectDiseaseRisks(
             @Param("ageGroupCode") String ageGroupCode,
             @Param("gender") String gender,
+            @Param("treatmentType") String treatmentType,
             @Param("limit") int limit
     );
 

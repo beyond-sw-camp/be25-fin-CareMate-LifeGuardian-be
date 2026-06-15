@@ -38,7 +38,7 @@ public class ReportTransactionService {
     private final ReportStorageServiceImpl reportStorageService;
 
     /**
-     * 템플릿 데이터 구성부터 PDF 업로드와 DB 이력 생성을 한 고객 단위로 처리한다.
+     * 템플릿 데이터 구성부터 PDF 업로드와 DB 이력 생성을 한 고객 단위로 처리
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ReportCreateResultDto createReport(ReportTargetDto target) {

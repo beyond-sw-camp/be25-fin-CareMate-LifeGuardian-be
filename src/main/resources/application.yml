@@ -65,22 +65,3 @@ logging:
     org.springframework.jdbc: DEBUG
     com.zaxxer.hikari: DEBUG
     org.hibernate.SQL: DEBUG
-# AWS 설정
-app:
-  report:
-    storage:
-      bucket: ${R2_BUCKET:lifeguardian-reports}
-      region: ${R2_REGION:auto}
-      key-prefix: ${R2_REPORT_PREFIX:reports}
-      endpoint: ${R2_ENDPOINT:}
-      access-key: ${R2_ACCESS_KEY_ID:}
-      secret-key: ${R2_SECRET_ACCESS_KEY:}
-      public-base-url: ${R2_PUBLIC_BASE_URL:}
-      path-style-access: ${R2_PATH_STYLE_ACCESS:true}
-    pdf:
-      # 폰트
-      font-location: ${REPORT_PDF_FONT_LOCATION:classpath:/fonts/Pretendard-Regular.ttf}
-    batch:
-      enabled: ${REPORT_BATCH_ENABLED:true} # 활성화 여부
-      cron: ${REPORT_BATCH_CRON:0 0 3 * * *} # 배치 시간 새벽 3시
-      zone: ${REPORT_BATCH_ZONE:Asia/Seoul}

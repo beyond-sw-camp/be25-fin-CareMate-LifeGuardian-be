@@ -26,6 +26,9 @@ import java.util.Map;
 public class ReportDataServiceImpl {
 
     private static final String GROWTH_REPORT_TYPE = "01";
+    private static final String INPATIENT = "입원";
+    private static final String OUTPATIENT = "외래";
+    private static final int RISK_LIMIT_PER_TREATMENT = 2;
 
     private final ReportMapper reportMapper;
     private final GrowthChartService growthChartService;
@@ -44,24 +47,25 @@ public class ReportDataServiceImpl {
         }
 
         AgeGroup currentAgeGroup = AgeGroup.fromAge(customer.getChildAge());
-        AgeGroup nextAgeGroup = currentAgeGroup.next();
         ReportWebformDto webform = target.getWebFormId() == null
                 ? null
                 : reportMapper.selectReportWebform(target.getWebFormId());
 
-        List<DiseaseRiskItemDto> currentRisks = loadRisks(
+        List<DiseaseRiskItemDto> currentRisks = new ArrayList<>();
+        currentRisks.addAll(loadRisks(
                 currentAgeGroup,
                 customer.getChildGender(),
-                3
-        );
-        List<DiseaseRiskItemDto> nextRisks = nextAgeGroup == null
-                ? List.of()
-                : loadRisks(nextAgeGroup, customer.getChildGender(), 2);
+                INPATIENT,
+                RISK_LIMIT_PER_TREATMENT
+        ));
+        currentRisks.addAll(loadRisks(
+                currentAgeGroup,
+                customer.getChildGender(),
+                OUTPATIENT,
+                RISK_LIMIT_PER_TREATMENT
+        ));
 
         List<GrowthStandardDto> growthStandards = List.of();
-        String heightSummary = null;
-        String weightSummary = null;
-        String overallSummary = null;
 
         if (webform != null && GROWTH_REPORT_TYPE.equals(target.getReportTypeCode())) {
             int ageMonth = customer.getChildAgeMonth();
@@ -74,11 +78,6 @@ public class ReportDataServiceImpl {
             );
             ensureCurrentMonthIncluded(growthStandards, customer.getChildGender(), ageMonth);
             prepareGrowthChart(growthStandards, webform, ageMonth);
-            heightSummary = createGrowthSummary(
-                    "키", webform.getHeight(), growthStandards, ageMonth, true);
-            weightSummary = createGrowthSummary(
-                    "몸무게", webform.getWeight(), growthStandards, ageMonth, false);
-            overallSummary = createOverallSummary(heightSummary, weightSummary);
         }
 
         Map<String, Object> variables = new HashMap<>();
@@ -95,12 +94,7 @@ public class ReportDataServiceImpl {
                 ? null
                 : growthChartService.createCombinedChart(growthStandards));
         variables.put("currentRisks", currentRisks);
-        variables.put("nextRisks", nextRisks);
         variables.put("currentAgeGroupName", currentAgeGroup.displayName);
-        variables.put("nextAgeGroupName", nextAgeGroup == null ? null : nextAgeGroup.displayName);
-        variables.put("heightSummary", heightSummary);
-        variables.put("weightSummary", weightSummary);
-        variables.put("overallSummary", overallSummary);
         return variables;
     }
 
@@ -110,14 +104,19 @@ public class ReportDataServiceImpl {
     private List<DiseaseRiskItemDto> loadRisks(
             AgeGroup ageGroup,
             String gender,
+            String treatmentType,
             int limit
     ) {
         List<DiseaseRiskItemDto> risks = new ArrayList<>(
-                reportMapper.selectDiseaseRisks(ageGroup.databaseCode, gender, Math.max(limit, 10))
+                reportMapper.selectDiseaseRisks(
+                        ageGroup.databaseCode,
+                        gender,
+                        treatmentType,
+                        limit
+                )
         );
 
         return risks.stream()
-                .limit(limit)
                 .peek(item -> item.setDescription(createRiskDescription(ageGroup, item)))
                 .toList();
     }
@@ -180,54 +179,6 @@ public class ReportDataServiceImpl {
     }
 
     /**
-     * 키 또는 몸무게를 백분위 기준과 비교해 사용자용 설명 문장을 만든다.
-     */
-    private String createGrowthSummary(
-            String label,
-            BigDecimal childValue,
-            List<GrowthStandardDto> standards,
-            int childAgeMonth,
-            boolean height
-    ) {
-        GrowthStandardDto standard = standards.stream()
-                .filter(item -> item.getAgeMonth() == childAgeMonth)
-                .findFirst()
-                .orElse(null);
-
-        if (standard == null || childValue == null) {
-            return label + "를 비교할 동일 연령·성별 성장 기준 데이터가 없습니다.";
-        }
-
-        BigDecimal p5 = height ? standard.getHeightP5() : standard.getWeightP5();
-        BigDecimal p50 = height ? standard.getHeightP50() : standard.getWeightP50();
-        BigDecimal p95 = height ? standard.getHeightP95() : standard.getWeightP95();
-
-        if (!height) {
-            if (childValue.compareTo(p5) < 0) {
-                return "몸무게가 같은 성별·나이 또래 중 하위 5%보다 적게 나가는 편입니다.";
-            }
-            if (childValue.compareTo(p50) < 0) {
-                return "몸무게가 같은 성별·나이 또래의 평균보다 적게 나가는 편입니다.";
-            }
-            if (childValue.compareTo(p95) <= 0) {
-                return "몸무게가 같은 성별·나이 또래의 평균보다 많이 나가는 편입니다.";
-            }
-            return "몸무게가 같은 성별·나이 또래 중 상위 5%보다 많이 나가는 편입니다.";
-        }
-
-        if (childValue.compareTo(p5) < 0) {
-            return "%s가 같은 성별·나이 또래 중 하위 5%%보다 작은 편입니다.".formatted(label);
-        }
-        if (childValue.compareTo(p50) < 0) {
-            return "%s가 같은 성별·나이 또래의 평균보다 작은 편입니다.".formatted(label);
-        }
-        if (childValue.compareTo(p95) <= 0) {
-            return "%s가 같은 성별·나이 또래의 평균보다 큰 편입니다.".formatted(label);
-        }
-        return "%s가 같은 성별·나이 또래 중 상위 5%%보다 큰 편입니다.".formatted(label);
-    }
-
-    /**
      * 조회 범위에 현재 월령 데이터가 빠진 경우 해당 월령을 추가한다.
      */
     private void ensureCurrentMonthIncluded(
@@ -264,11 +215,6 @@ public class ReportDataServiceImpl {
             return 36;
         }
         return Math.min(227, ageMonth + 18);
-    }
-
-    private String createOverallSummary(String heightSummary, String weightSummary) {
-        return heightSummary + " " + weightSummary
-                + " 성장 수치는 진단 결과가 아니며, 또래 기준과 비교한 상담 참고 정보입니다.";
     }
 
     private BigDecimal max(BigDecimal first, BigDecimal second) {
@@ -314,9 +260,5 @@ public class ReportDataServiceImpl {
             return age < 0 ? AGE_01 : AGE_04;
         }
 
-        private AgeGroup next() {
-            int nextOrdinal = ordinal() + 1;
-            return nextOrdinal < values().length ? values()[nextOrdinal] : null;
-        }
     }
 }

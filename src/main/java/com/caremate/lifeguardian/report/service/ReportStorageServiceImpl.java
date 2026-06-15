@@ -16,7 +16,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * 생성된 리포트 PDF를 객체 저장소에 업로드하고 접근 URL을 반환한다.
+ * 생성된 리포트 PDF를 객체 저장소에 업로드하고 접근 URL을 반환
  */
 @Service
 @RequiredArgsConstructor
@@ -29,7 +29,7 @@ public class ReportStorageServiceImpl {
     private final ReportStorageProperties properties;
 
     /**
-     * 고객별 고유 객체 키로 PDF를 업로드한다.
+     * 고객별 고유 객체 키로 PDF를 업로드
      */
     public String uploadPdf(byte[] pdfBytes, Long customerId) {
         String objectKey = createObjectKey(customerId);
@@ -57,7 +57,7 @@ public class ReportStorageServiceImpl {
             );
             throw new BaseException(
                     500,
-                    "R2 업로드가 거부되었습니다. 서버 로그의 상태 코드와 오류 코드를 확인하세요."
+                    "업로드가 거부되었습니다. 서버 로그의 상태 코드와 오류 코드를 확인하세요."
             );
         } catch (SdkClientException e) {
             log.error(
@@ -68,7 +68,7 @@ public class ReportStorageServiceImpl {
             );
             throw new BaseException(
                     500,
-                    "R2 연결에 실패했습니다. endpoint와 네트워크 설정을 확인하세요."
+                    "연결에 실패했습니다. 네트워크 설정을 확인하세요."
             );
         } catch (Exception e) {
             log.error("Unexpected R2 upload failure", e);

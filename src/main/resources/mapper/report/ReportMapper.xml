@@ -136,9 +136,10 @@
             SELECT MAX(latest.data_year)
             FROM cdc_disease_statistic latest
             WHERE TRIM(latest.age_group_code) = #{ageGroupCode}
-        )
+          )
           AND TRIM(cds.age_group_code) = #{ageGroupCode}
           AND (cds.gender = #{gender} OR cds.gender = 'ALL')
+          AND cds.treatment_type = #{treatmentType}
         ORDER BY
             CASE WHEN cds.gender = #{gender} THEN 0 ELSE 1 END,
             cds.rank_by_age_gender,
