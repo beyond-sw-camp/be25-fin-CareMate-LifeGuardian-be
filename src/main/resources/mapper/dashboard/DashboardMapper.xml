@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.caremate.lifeguardian.dashboard.mapper.DashboardMapper">
+
+    <!-- 대시보드 요약 조회
+
+    조회 데이터:
+    - 잠재고객 미상담 고객 수
+    - 잠재고객 상담중 고객 수
+    - 계약 진행 상태별 고객 수
+
+    조회 기준:
+    - 로그인한 영업사원 ID
+    -->
+    <select id="findDashboardSummary"
+            resultType="com.caremate.lifeguardian.dashboard.dto.response.DashboardSummaryResponse">
+
+        SELECT
+            /* 잠재고객 미상담 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM potential_customer pc
+                WHERE pc.sales_user_id = #{salesUserId}
+                    AND pc.consult_status_code = '01'
+            ) AS uncontactedCustomerCount,
+
+            /* 잠재고객 상담중 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM potential_customer pc
+                WHERE pc.sales_user_id = #{salesUserId}
+                    AND pc.consult_status_code = '02'
+            ) AS consultingCustomerCount,
+
+            /* 설계중 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_status_code = '01'
+            ) AS designingContractCount,
+
+            /* 설계완료 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_status_code = '02'
+            ) AS designedContractCount,
+
+            /* 청약중 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_status_code = '03'
+            ) AS subscriptionInProgressCount,
+
+            /* 청약완료 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_status_code = '04'
+            ) AS subscriptionCompletedCount,
+
+            /* 수납완료 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_status_code = '06'
+            ) AS paymentCompletedCount,
+
+            /*계약완료 고객 수 */
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_result_status_code = '02'
+            ) AS contractCompletedCount
+    </select>
+
+    <!-- 영업 달성률 조회 -->
+    <select id="findDashboardAchievement"
+            resultType="com.caremate.lifeguardian.dashboard.dto.response.DashboardAchievementResponse">
+
+        SELECT
+            COALESCE(smt.target_contract_count, 0) AS targetContractCount,
+
+            (
+                SELECT COUNT(*)
+                FROM contract c
+                WHERE c.sales_user_id = #{salesUserId}
+                    AND c.contract_result_status_code = '02'
+                    AND DATE_FORMAT(c.updated_at, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m')
+            ) AS completedContractCount,
+
+            CASE
+                WHEN COALESCE(smt.target_contract_count, 0) = 0 THEN 0
+                ELSE ROUND(
+                     (
+                         (
+                             SELECT COUNT(*)
+                             FROM contract c
+                             WHERE c.sales_user_id = #{salesUserId}
+                                AND c.contract_result_status_code = '02'
+                                AND DATE_FORMAT(c.updated_at, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m')
+                         ) * 100.0
+                     ) / smt.target_contract_count
+                )
+            END AS achievementRate
+
+        FROM sales_monthly_target smt
+        WHERE smt.sales_user_id = #{salesUserId}
+            AND smt.target_year_month = DATE_FORMAT(CURDATE(), '%Y%m')
+    </select>
+
+    <!-- 오늘 연락 고객 목록 조회 -->
+    <select id="findTodayContactCustomers"
+            resultType="com.caremate.lifeguardian.dashboard.dto.response.ContactCustomerResponse">
+
+        SELECT
+            base.actionItemId AS actionItemId,
+            pc.id AS potentialCustomerId,
+            pc.name AS customerName,
+            pc.gender AS gender,
+            TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) AS age,
+            pc.birth_date AS birthDate,
+            base.nextInsuranceAgeShiftDate AS insuranceAgeShiftDate,
+
+            CASE
+                WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 0 THEN 'D-DAY'
+                ELSE CONCAT('D-', DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()))
+            END AS ageChangeLabel,
+
+            CASE
+                WHEN base.badgeTriggerTypeCode = '06' THEN '가족 통합 리모델링'
+                WHEN base.badgeTriggerTypeCode = '07' THEN '자녀 보장 점검'
+                WHEN base.badgeTriggerTypeCode = '08' THEN '부모 건강 점검'
+                ELSE NULL
+            END AS badgeName,
+
+            CASE
+                WHEN base.badgeTriggerTypeCode = '06' THEN 'RED'
+                WHEN base.badgeTriggerTypeCode = '07' THEN 'ORANGE'
+                WHEN base.badgeTriggerTypeCode = '08' THEN 'YELLOW'
+                ELSE NULL
+            END AS badgeColor,
+
+            pc.consult_status_code AS consultStatusCode,
+            consult_code.code_name AS consultStatusName,
+
+            CASE
+                WHEN DATE_FORMAT(pc.birth_date, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+                THEN TRUE
+                ELSE FALSE
+            END AS webFormSendEnabled,
+
+            COALESCE(wr.webform_status_code, '01') AS webFormStatusCode,
+            webform_code.code_name AS webFormStatusName,
+
+            cr.id AS reportId,
+
+            CASE
+                WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 0
+                THEN TRUE
+                ELSE FALSE
+            END AS reportSendEnabled,
+
+            cr.send_status_code AS reportSendStatusCode,
+            send_code.code_name AS reportSendStatusName,
+
+            base.priorityScore AS priorityScore
+
+        FROM (
+            SELECT
+                dai.sales_user_id,
+                dai.customer_id,
+                MIN(dai.id) AS actionItemId,
+                MAX(dai.priority_score) AS priorityScore,
+                MIN(dai.created_at) AS createdAt,
+
+                MAX(
+                    CASE
+                        WHEN dai.trigger_type_code = '06' THEN 1
+                        ELSE 0
+                    END
+                ) AS hasThreeStepCaseA,
+
+                MAX(
+                    CASE
+                        WHEN dai.trigger_type_code IN ('06', '07', '08')
+                        THEN dai.trigger_type_code
+                        ELSE NULL
+                    END
+                ) AS badgeTriggerTypeCode,
+
+                COALESCE(
+                    pc_inner.insurance_age_shift_date,
+                    CASE
+                        WHEN DATE_ADD(
+                            STR_TO_DATE(
+                                CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(pc_inner.birth_date, '%m-%d')),
+                                '%Y-%m-%d'
+                            ),
+                            INTERVAL 6 MONTH
+                        ) &lt; CURDATE()
+                        THEN DATE_ADD(
+                            DATE_ADD(
+                                STR_TO_DATE(
+                                    CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(pc_inner.birth_date, '%m-%d')),
+                                    '%Y-%m-%d'
+                                ),
+                                INTERVAL 6 MONTH
+                            ),
+                            INTERVAL 1 YEAR
+                        )
+                        ELSE DATE_ADD(
+                            STR_TO_DATE(
+                                CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(pc_inner.birth_date, '%m-%d')),
+                                '%Y-%m-%d'
+                            ),
+                            INTERVAL 6 MONTH
+                        )
+                    END
+                ) AS nextInsuranceAgeShiftDate
+
+            FROM daily_action_item dai
+
+            INNER JOIN potential_customer pc_inner
+                ON dai.customer_id = pc_inner.id
+
+            WHERE dai.sales_user_id = #{salesUserId}
+                AND dai.target_date = CURDATE()
+                AND dai.is_completed = FALSE
+                AND dai.conversion_status_code = '01'
+
+            GROUP BY
+                dai.sales_user_id,
+                dai.customer_id,
+                pc_inner.birth_date,
+                pc_inner.insurance_age_shift_date
+
+            HAVING
+                DATE_FORMAT(pc_inner.birth_date, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+                OR DATEDIFF(nextInsuranceAgeShiftDate, CURDATE()) IN (30, 7, 0)
+                OR hasThreeStepCaseA = 1
+        ) base
+
+        INNER JOIN potential_customer pc
+            ON base.customer_id = pc.id
+
+        LEFT JOIN common_code consult_code
+            ON consult_code.group_code = 'CONSULT_STATUS'
+            AND consult_code.code_value = pc.consult_status_code
+
+        LEFT JOIN (
+            SELECT
+                wr1.customer_id,
+                wr1.conversion_status_code,
+                wr1.webform_status_code
+            FROM webform_response wr1
+            INNER JOIN (
+                SELECT
+                    customer_id,
+                    conversion_status_code,
+                    MAX(id) AS latest_webform_id
+                FROM webform_response
+                WHERE conversion_status_code = '01'
+                GROUP BY customer_id, conversion_status_code
+            ) latest_wr
+                ON wr1.id = latest_wr.latest_webform_id
+        ) wr
+            ON wr.customer_id = pc.id
+            AND wr.conversion_status_code = '01'
+
+        LEFT JOIN common_code webform_code
+            ON webform_code.group_code = 'WEBFORM_STATUS'
+            AND webform_code.code_value = COALESCE(wr.webform_status_code, '01')
+
+        LEFT JOIN customer_report cr
+            ON cr.customer_id = pc.id
+            AND cr.conversion_status_code = '01'
+            AND cr.action_item_id = base.actionItemId
+
+        LEFT JOIN common_code send_code
+            ON send_code.group_code = 'SEND_STATUS'
+            AND send_code.code_value = cr.send_status_code
+
+        ORDER BY
+            CASE
+                WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 0 THEN 1
+                WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 7 THEN 2
+                WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 30 THEN 3
+                WHEN base.hasThreeStepCaseA = 1 THEN 4
+                ELSE 5
+            END,
+            base.priorityScore DESC,
+            base.createdAt ASC
+    </select>
+</mapper>
