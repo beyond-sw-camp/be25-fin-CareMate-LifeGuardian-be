@@ -68,7 +68,7 @@ public class JwtProvider {
                 .signWith(key)
                 .compact();
     }
-    
+
     // 토큰에서 Claims 전체 파싱
     // 토큰 파싱할떄 유효성 검증 통합
     public Claims getClaims(String token) {
