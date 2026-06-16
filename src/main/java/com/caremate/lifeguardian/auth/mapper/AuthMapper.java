@@ -28,4 +28,12 @@ public interface AuthMapper {
 			@Param("userAgent") String userAgent,
 			@Param("reason") String reason
 	);
+
+	SalesUser findById(@Param("userId") Long userId);
+
+	void updateInitialPassword(
+			@Param("userId") Long userId,
+			@Param("passwordHash") String passwordHash,
+			@Param("termsAgreed") Boolean termsAgreed
+	);
 }
