@@ -15,4 +15,6 @@ public final class RedisKeyGenerator {
 	public static String blacklist(String accessToken) {
 		return RedisKeyConstants.BLACKLIST_PREFIX + ":" + accessToken;
 	}
+
+	public static String recommendation(Long customerId) { return RedisKeyConstants.RECOMMENDATION_PREFIX + ":" + customerId; }
 }
