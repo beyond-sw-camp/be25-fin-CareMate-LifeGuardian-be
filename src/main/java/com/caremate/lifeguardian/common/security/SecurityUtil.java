@@ -12,6 +12,7 @@ public final class SecurityUtil {
     }
 
     public static Long getCurrentUserId() {
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if(authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal() == null){
