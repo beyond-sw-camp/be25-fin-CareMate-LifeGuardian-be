@@ -68,41 +68,25 @@ public class JwtProvider {
                 .signWith(key)
                 .compact();
     }
-
-    /**
-     * 토큰 서명 및 만료 유효성 검증
-     */
-    public boolean validateToken(String token) {
+    
+    // 토큰에서 Claims 전체 파싱
+    // 토큰 파싱할떄 유효성 검증 통합
+    public Claims getClaims(String token) {
         try {
-            Jwts.parser()
+            return Jwts.parser()
                     .verifyWith(key)
                     .build()
-                    .parseSignedClaims(token);
-            return true;
+                    .parseSignedClaims(token)
+                    .getPayload();
         } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
-            log.error("잘못된 JWT 서명입니다.");
             throw new AuthException("유효하지 않은 토큰 서명입니다.");
         } catch (ExpiredJwtException e) {
-            log.error("만료된 JWT 토큰입니다.");
             throw new AuthException("토큰이 만료되었습니다. 다시 로그인해주세요.");
         } catch (UnsupportedJwtException e) {
-            log.error("지원되지 않는 JWT 토큰입니다.");
             throw new AuthException("지원되지 않는 토큰 형식입니다.");
         } catch (IllegalArgumentException e) {
-            log.error("JWT 토큰이 잘못되었습니다.");
             throw new AuthException("토큰이 비어있거나 잘못되었습니다.");
         }
-    }
-
-    /**
-     * 토큰에서 Claims 전체 파싱
-     */
-    public Claims getClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
     }
 
     /**
