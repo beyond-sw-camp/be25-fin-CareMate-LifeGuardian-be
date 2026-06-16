@@ -1,5 +1,6 @@
 package com.caremate.lifeguardian.auth.service;
 
+import com.caremate.lifeguardian.auth.dto.request.InitialPasswordResetRequest;
 import com.caremate.lifeguardian.auth.dto.request.LoginRequest;
 import com.caremate.lifeguardian.auth.dto.response.AuthResultDto;
 import com.caremate.lifeguardian.auth.mapper.AuthMapper;
@@ -148,5 +149,52 @@ public class AuthServiceImpl implements AuthService {
 		}
 
 		throw new BaseException(500, "알 수 없는 사용자 권한입니다.");
+	}
+
+	@Override
+	@Transactional
+	public void resetInitialPassword(
+			Long userId,
+			InitialPasswordResetRequest request,
+			String ipAddress,
+			String userAgent
+	) {
+		SalesUser user = authMapper.findById(userId);
+
+		if (user == null) {
+			throw new BaseException(404, "사용자 정보를 찾을 수 없습니다.");
+		}
+
+		if (!ACTIVE_STATUS_CODE.equals(user.getStatusCode())) {
+			throw new BaseException(403, "비활성화된 계정입니다. 관리자에게 문의하세요.");
+		}
+
+		if (!Boolean.TRUE.equals(user.getIsTempPassword())) {
+			throw new BaseException(403, "이미 최초 로그인 설정이 완료된 사용자입니다.");
+		}
+
+		if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+			throw new BaseException(400, "새 비밀번호와 비밀번호 확인이 일치하지 않습니다.");
+		}
+
+		if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+			throw new BaseException(400, "임시 비밀번호와 동일한 비밀번호는 사용할 수 없습니다.");
+		}
+
+		String encodedPassword = passwordEncoder.encode(request.getNewPassword());
+
+		authMapper.updateInitialPassword(
+				userId,
+				encodedPassword,
+				request.getPrivacyPolicyAgreed()
+		);
+
+		authMapper.insertAuditLog(
+				userId,
+				"07",
+				ipAddress,
+				userAgent,
+				"최초 로그인 비밀번호 재설정"
+		);
 	}
 }

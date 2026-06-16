@@ -1,5 +1,6 @@
 package com.caremate.lifeguardian.auth.controller;
 
+import com.caremate.lifeguardian.auth.dto.request.InitialPasswordResetRequest;
 import com.caremate.lifeguardian.auth.dto.request.LoginRequest;
 import com.caremate.lifeguardian.auth.dto.response.AuthResultDto;
 import com.caremate.lifeguardian.auth.dto.response.LoginResponse;
@@ -7,6 +8,7 @@ import com.caremate.lifeguardian.auth.service.AuthService;
 import com.caremate.lifeguardian.common.ApiResponse;
 import com.caremate.lifeguardian.common.security.CookieUtil;
 import com.caremate.lifeguardian.common.security.JwtProvider;
+import com.caremate.lifeguardian.common.security.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,7 +36,6 @@ public class AuthController {
 	 * 사용자 일반 로그인 API (쿠키 모듈화 및 토큰 반환 방식 변경 적용)
 	 */
 	@PostMapping("/login")
-	@Operation(tags = "로그인 API")
 	public ResponseEntity<ApiResponse<LoginResponse>> login(
 			@Valid @RequestBody LoginRequest request,
 			HttpServletRequest httpServletRequest,
@@ -69,5 +71,22 @@ public class AuthController {
 		}
 
 		return request.getRemoteAddr();
+	}
+
+	@PatchMapping("/initial-password")
+	public ResponseEntity<ApiResponse<Void>> resetInitialPassword(
+			@Valid @RequestBody InitialPasswordResetRequest request,
+			HttpServletRequest httpServletRequest
+	) {
+		Long userId = SecurityUtil.getCurrentUserId();
+
+		String ipAddress = getClientIp(httpServletRequest);
+		String userAgent = httpServletRequest.getHeader("User-Agent");
+
+		authService.resetInitialPassword(userId, request, ipAddress, userAgent);
+
+		return ResponseEntity.ok(
+				ApiResponse.success(200, "최초 로그인 비밀번호 재설정이 완료되었습니다.", null)
+		);
 	}
 }
