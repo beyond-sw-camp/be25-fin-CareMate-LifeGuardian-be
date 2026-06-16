@@ -9,6 +9,7 @@ import com.caremate.lifeguardian.common.ApiResponse;
 import com.caremate.lifeguardian.common.security.CookieUtil;
 import com.caremate.lifeguardian.common.security.JwtProvider;
 import com.caremate.lifeguardian.common.security.SecurityUtil;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;

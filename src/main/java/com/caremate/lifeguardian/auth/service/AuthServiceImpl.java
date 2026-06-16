@@ -129,6 +129,8 @@ public class AuthServiceImpl implements AuthService {
 				.refreshToken(refreshToken)
 				.userId(user.getId())
 				.name(user.getName())
+				.branchId(user.getBranchId())
+				.branchName(user.getBranchName())
 				.role(role.name())
 				.isFirstLogin(user.getIsTempPassword())
 				.build();

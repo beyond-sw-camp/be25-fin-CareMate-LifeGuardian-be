@@ -12,7 +12,17 @@ public final class SecurityUtil {
     }
 
     public static Long getCurrentUserId() {
-        // 무조건 1000001번만 나오게 함
-        return 1000001L;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if(authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal() == null){
+            throw new BaseException(401, "로그인이 필요합니다.");
+        }
+
+        if(!(authentication.getPrincipal() instanceof Long)){
+            throw new BaseException(401, "유효하지 않은 인증 형식입니다.");
+        }
+
+
+        return(Long) authentication.getPrincipal();
     }
 }

@@ -17,6 +17,7 @@ public class SalesUser {
 
     private Long id;
     private Long branchId;
+    private String branchName;
     private String employeeId;
     private String passwordHash;
     private String name;
@@ -26,7 +27,6 @@ public class SalesUser {
     private String rankCode;
     private String roleCode;
     private String statusCode;
-    private Integer loginFailCount;
     private Boolean isTempPassword;
     private Boolean termsAgreed;
     private LocalDate joinedAt;

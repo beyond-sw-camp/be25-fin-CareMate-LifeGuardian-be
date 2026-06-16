@@ -5,9 +5,13 @@
 
 <mapper namespace="com.caremate.lifeguardian.auth.mapper.AuthMapper">
 
-    <resultMap id="SalesUserMap" type="com.caremate.lifeguardian.member.domain.SalesUser">
+    <resultMap id="SalesUserMap"
+               type="com.caremate.lifeguardian.member.domain.SalesUser">
+
         <id property="id" column="id"/>
+
         <result property="branchId" column="branch_id"/>
+        <result property="branchName" column="branch_name"/>
         <result property="employeeId" column="employee_id"/>
         <result property="passwordHash" column="password_hash"/>
         <result property="name" column="name"/>
@@ -19,25 +23,29 @@
         <result property="statusCode" column="status_code"/>
         <result property="isTempPassword" column="is_temp_password"/>
         <result property="termsAgreed" column="terms_agreed"/>
+
     </resultMap>
 
     <select id="findByLoginId" resultMap="SalesUserMap">
         SELECT
-        id,
-        branch_id,
-        employee_id,
-        password_hash,
-        name,
-        birth_date,
-        email,
-        phone,
-        rank_code,
-        role_code,
-        status_code,
-        is_temp_password,
-        terms_agreed
-        FROM sales_user
-        WHERE employee_id = #{loginId}
+        su.id,
+        su.branch_id,
+        b.branch_name,
+        su.employee_id,
+        su.password_hash,
+        su.name,
+        su.birth_date,
+        su.email,
+        su.phone,
+        su.rank_code,
+        su.role_code,
+        su.status_code,
+        su.is_temp_password,
+        su.terms_agreed
+        FROM sales_user su
+        INNER JOIN branch b
+        ON su.branch_id = b.id
+        WHERE su.employee_id = #{loginId}
     </select>
 
     <update id="blacklistPreviousTokens">
