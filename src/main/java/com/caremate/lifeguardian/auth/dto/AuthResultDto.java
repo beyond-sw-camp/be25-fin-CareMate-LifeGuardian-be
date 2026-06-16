@@ -1,5 +1,6 @@
-package com.caremate.lifeguardian.auth.dto.response;
+package com.caremate.lifeguardian.auth.dto;
 
+import com.caremate.lifeguardian.auth.dto.response.LoginResponse;
 import lombok.Builder;
 import lombok.Getter;
 

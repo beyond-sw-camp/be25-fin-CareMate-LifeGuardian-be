@@ -1,5 +1,7 @@
 package com.caremate.lifeguardian.common.security;
 
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
@@ -34,5 +36,14 @@ public class CookieUtil {
 				.path("/")
 				.maxAge(0) // 만료 시간을 0으로 주어 즉시 브라우저에서 소멸하게 만듦
 				.build();
+	}
+
+	public void addRefreshTokenCookie(
+			HttpServletResponse response,
+			String refreshToken,
+			long maxAgeSeconds
+	) {
+		ResponseCookie cookie = createRefreshTokenCookie(refreshToken, maxAgeSeconds);
+		response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 	}
 }
