@@ -7,6 +7,7 @@ import com.caremate.lifeguardian.auth.service.AuthService;
 import com.caremate.lifeguardian.common.ApiResponse;
 import com.caremate.lifeguardian.common.security.CookieUtil;
 import com.caremate.lifeguardian.common.security.JwtProvider;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -32,6 +33,7 @@ public class AuthController {
 	 * 사용자 일반 로그인 API (쿠키 모듈화 및 토큰 반환 방식 변경 적용)
 	 */
 	@PostMapping("/login")
+	@Operation(tags = "로그인 API")
 	public ResponseEntity<ApiResponse<LoginResponse>> login(
 			@Valid @RequestBody LoginRequest request,
 			HttpServletRequest httpServletRequest,
