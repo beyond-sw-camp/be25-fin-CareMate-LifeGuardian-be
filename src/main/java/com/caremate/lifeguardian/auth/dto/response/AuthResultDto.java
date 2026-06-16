@@ -10,6 +10,9 @@ public class AuthResultDto {
 	private String refreshToken; // 컨트롤러가 쿠키를 구울 때만 참조하고 버려짐
 	private Long userId;
 	private String name;
+
+	private Long branchId;
+	private String branchName;
 	private String role;
 	private Boolean isFirstLogin;
 
@@ -20,6 +23,8 @@ public class AuthResultDto {
 				.userId(this.userId)
 				.name(this.name)
 				.role(this.role)
+				.branchId(this.getBranchId())
+				.branchName(this.getBranchName())
 				.isFirstLogin(this.isFirstLogin)
 				.build();
 	}
