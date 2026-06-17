@@ -34,16 +34,20 @@ public class CustomerDetailServiceImpl implements CustomerDetailService {
             throw new BaseException(404, "고객 정보를 찾을 수 없습니다.");
         }
 
-        CustomerBasicInfoRow row =
-                customerDetailMapper.selectCustomerBasicInfo(
-                        customerId,
-                        conversionStatusCode,
-                        currentUserId
-                );
+        CustomerBasicInfoRow row = selectCustomerBasicInfo(
+                customerId,
+                conversionStatusCode,
+                currentUserId
+        );
 
         if (row == null) {
             throw new BaseException(403, "해당 고객에 접근할 권한이 없습니다.");
         }
+
+        row.setReportUrl(customerDetailMapper.selectLatestReportUrl(
+                customerId,
+                conversionStatusCode
+        ));
 
         List<CustomerBasicInfoResponse.Badge> badges = new ArrayList<>();
         for (CustomerBadgeRow badge : customerDetailMapper.selectCustomerBadges(
@@ -84,6 +88,24 @@ public class CustomerDetailServiceImpl implements CustomerDetailService {
                 && !"02".equals(conversionStatusCode)) {
             throw new BaseException(400, "유효하지 않은 고객 전환 상태 코드입니다.");
         }
+    }
+
+    private CustomerBasicInfoRow selectCustomerBasicInfo(
+            Long customerId,
+            String conversionStatusCode,
+            Long currentUserId
+    ) {
+        if ("01".equals(conversionStatusCode)) {
+            return customerDetailMapper.selectPotentialCustomerBasicInfo(
+                    customerId,
+                    currentUserId
+            );
+        }
+
+        return customerDetailMapper.selectIntegratedCustomerBasicInfo(
+                customerId,
+                currentUserId
+        );
     }
 
     private CustomerBasicInfoResponse.Alert createAlert(LocalDate shiftDate) {

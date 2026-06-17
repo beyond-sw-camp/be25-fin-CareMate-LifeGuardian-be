@@ -15,10 +15,19 @@ public interface CustomerDetailMapper {
             @Param("conversionStatusCode") String conversionStatusCode
     );
 
-    CustomerBasicInfoRow selectCustomerBasicInfo(
+    CustomerBasicInfoRow selectPotentialCustomerBasicInfo(
             @Param("customerId") Long customerId,
-            @Param("conversionStatusCode") String conversionStatusCode,
             @Param("currentUserId") Long currentUserId
+    );
+
+    CustomerBasicInfoRow selectIntegratedCustomerBasicInfo(
+            @Param("customerId") Long customerId,
+            @Param("currentUserId") Long currentUserId
+    );
+
+    String selectLatestReportUrl(
+            @Param("customerId") Long customerId,
+            @Param("conversionStatusCode") String conversionStatusCode
     );
 
     List<CustomerBadgeRow> selectCustomerBadges(

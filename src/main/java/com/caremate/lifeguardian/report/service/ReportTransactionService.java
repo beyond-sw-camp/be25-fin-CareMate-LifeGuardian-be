@@ -7,7 +7,7 @@ import com.caremate.lifeguardian.report.dto.internal.ReportSendTargetDto;
 import com.caremate.lifeguardian.report.dto.internal.ReportTargetDto;
 import com.caremate.lifeguardian.report.dto.request.CustomerReportInsertDto;
 import com.caremate.lifeguardian.report.dto.response.ReportCreateResultDto;
-import com.caremate.lifeguardian.report.mapper.ReportBatchMapper;
+import com.caremate.lifeguardian.scheduler.report.mapper.ReportBatchMapper;
 import com.caremate.lifeguardian.report.mapper.ReportMapper;
 import com.caremate.lifeguardian.report.mapper.ReportSendMapper;
 import lombok.RequiredArgsConstructor;
