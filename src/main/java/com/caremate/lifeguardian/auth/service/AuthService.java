@@ -25,4 +25,10 @@ public interface AuthService {
 			String ipAddress,
 			String userAgent
 	);
+
+	void logout(
+			Long userId,
+			String ipAddress,
+			String userAgent
+	);
 }

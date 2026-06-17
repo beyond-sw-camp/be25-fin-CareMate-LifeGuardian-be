@@ -1,49 +1,75 @@
 package com.caremate.lifeguardian.common.security;
 
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CookieUtil {
+
+	/**
+	 * Refresh Token Cookie 이름
+	 *
+	 * 로그인, 재발급, 로그아웃에서 동일한 쿠키명을 사용해야
+	 * 브라우저가 같은 쿠키로 인식한다.
+	 */
 	public static final String REFRESH_TOKEN_NAME = "refreshToken";
 
 	/**
-	 * 리프레시 토큰 전용 보안 쿠키 생성
-	 * @param refreshToken       발급된 JWT Refresh Token
-	 * @param maxAgeSeconds      만료 시간 (초) -> jwtProvider.getRefreshTokenStepSeconds() 매핑용
+	 * Refresh Token 저장용 HttpOnly Cookie 생성
+	 *
+	 * 로그인 또는 토큰 재발급 성공 시 호출된다.
+	 *
+	 * @param refreshToken 발급된 JWT Refresh Token
+	 * @param maxAgeSeconds 쿠키 만료 시간(초)
+	 * @return Set-Cookie 헤더에 넣을 ResponseCookie 객체
 	 */
-	public ResponseCookie createRefreshTokenCookie(String refreshToken, long maxAgeSeconds) {
-		return ResponseCookie.from(REFRESH_TOKEN_NAME, refreshToken) // 상수로 변경하여 일관성 유지
-				.httpOnly(true)   // XSS 공격 방지
-				.secure(false)    // 빌드/로컬 테스트 환경 안정성을 위해 일단 false 처리 (운영 환경 적용시 상단이나 yml 설정 연동 권장)
-				.path("/")        // 전체 경로 전송 허용
+	public ResponseCookie createRefreshTokenCookie(
+			String refreshToken,
+			long maxAgeSeconds
+	) {
+		return ResponseCookie.from(REFRESH_TOKEN_NAME, refreshToken)
+				// JavaScript에서 쿠키 접근 불가
+				// XSS 공격으로 Refresh Token이 탈취되는 위험을 줄인다.
+				.httpOnly(true)
+
+				// HTTPS 환경에서만 쿠키를 전송할지 여부
+				// 로컬 개발 환경에서는 HTTP 테스트를 위해 false
+				// 운영 HTTPS 환경에서는 true 권장
+				.secure(false)
+
+				// 모든 API 경로에서 refreshToken 쿠키를 사용할 수 있도록 설정
+				.path("/")
+
+				// 쿠키 만료 시간 설정
+				// Refresh Token 만료 시간과 동일하게 맞추는 것이 일반적이다.
 				.maxAge(maxAgeSeconds)
-				.sameSite("Lax")  // CSRF 방지 정책
+
+				// CSRF 위험을 줄이기 위한 SameSite 정책
+				// Lax는 일반적인 페이지 이동에는 쿠키를 허용하고,
+				// 일부 외부 사이트 요청에는 쿠키 전송을 제한한다.
+				.sameSite("Lax")
+
 				.build();
 	}
 
 	/**
-	 * 쿠키 완전히 삭제 (로그아웃 혹은 토큰 만료 탈퇴 시 사용)
-	 * 브라우저에서 쿠키가 확실히 삭제되려면 생성 시점과 설정(Path, HttpOnly, SameSite)이 일치해야 합니다.
+	 * Refresh Token 삭제용 Cookie 생성
+	 *
+	 * 로그아웃 시 호출된다.
+	 *
+	 * 쿠키는 서버가 직접 삭제할 수 없으므로,
+	 * 같은 이름/경로의 쿠키를 maxAge(0)으로 다시 내려보내
+	 * 브라우저가 즉시 만료 처리하도록 만든다.
+	 *
+	 * @return Refresh Token 삭제용 ResponseCookie 객체
 	 */
 	public ResponseCookie deleteRefreshTokenCookie() {
 		return ResponseCookie.from(REFRESH_TOKEN_NAME, "")
 				.httpOnly(true)
 				.secure(false)
-				.sameSite("Lax")
 				.path("/")
-				.maxAge(0) // 만료 시간을 0으로 주어 즉시 브라우저에서 소멸하게 만듦
+				.maxAge(0)
+				.sameSite("Lax")
 				.build();
-	}
-
-	public void addRefreshTokenCookie(
-			HttpServletResponse response,
-			String refreshToken,
-			long maxAgeSeconds
-	) {
-		ResponseCookie cookie = createRefreshTokenCookie(refreshToken, maxAgeSeconds);
-		response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 	}
 }
