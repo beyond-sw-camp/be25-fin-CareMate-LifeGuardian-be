@@ -16,4 +16,7 @@ public final class RedisKeyConstants {
 	// Access Token 블랙리스트 저장용 Prefix
 	public static final String BLACKLIST_PREFIX = "BL:";
 
+
+	public static final String RECOMMENDATION_PREFIX = "RECOMMENDATION";
+
 }
