@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.caremate.lifeguardian.userdetail.mapper.CustomerDetailMapper">
+
+    <select id="existsCustomer" resultType="boolean">
+        <choose>
+            <when test="conversionStatusCode == '01'">
+                SELECT COUNT(*) > 0
+                FROM potential_customer
+                WHERE id = #{customerId}
+            </when>
+            <otherwise>
+                SELECT COUNT(*) > 0
+                FROM integrated_customer
+                WHERE integrated_customer_id = #{customerId}
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectCustomerBasicInfo" resultType="BasicInfo">
+        <choose>
+            <when test="conversionStatusCode == '01'">
+                SELECT
+                    pc.id AS customerId,
+                    pc.name AS childName,
+                    pc.gender AS childGender,
+                    TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) AS childAge,
+                    pc.birth_date AS childBirthDate,
+                    pc.consult_status_code AS consultStatusCode,
+                    consult.code_name AS consultStatusName,
+                    pc.conversion_status_code AS conversionStatusCode,
+                    conversion.code_name AS conversionStatusName,
+                    (
+                        SELECT cr.report_url
+                        FROM customer_report cr
+                        WHERE cr.customer_id = pc.id
+                          AND cr.conversion_status_code = pc.conversion_status_code
+                        ORDER BY cr.created_at DESC, cr.id DESC
+                        LIMIT 1
+                    ) AS reportUrl,
+                    CASE
+                        WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 0 AND 6 THEN '01'
+                        WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 7 AND 13 THEN '02'
+                        WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 14 AND 20 THEN '03'
+                        ELSE '04'
+                    END AS lifeStageCode,
+                    lifecycle.code_name AS lifeStageName,
+                    pc.insurance_age_shift_date AS insuranceAgeShiftDate,
+                    parent.integrated_customer_id AS parentCustomerId,
+                    parent.name AS guardianName,
+                    pc.relationship_code AS relationshipCode,
+                    relationship.code_name AS relationshipName,
+                    parent.phone AS guardianPhone,
+                    parent.address AS guardianAddress,
+                    TIMESTAMPDIFF(YEAR, parent.birth_date, CURDATE()) AS guardianAge
+                FROM potential_customer pc
+                INNER JOIN integrated_customer parent
+                    ON parent.integrated_customer_id = pc.parent_customer_id
+                LEFT JOIN common_code consult
+                    ON consult.group_code = 'CONSULT_STATUS'
+                   AND consult.code_value = pc.consult_status_code
+                LEFT JOIN common_code conversion
+                    ON conversion.group_code = 'CONVERSION_STATUS'
+                   AND conversion.code_value = pc.conversion_status_code
+                LEFT JOIN common_code relationship
+                    ON relationship.group_code = 'RELATIONSHIP'
+                   AND relationship.code_value = pc.relationship_code
+                LEFT JOIN common_code lifecycle
+                    ON lifecycle.group_code = 'LIFECYCLE'
+                   AND lifecycle.code_value = CASE
+                        WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 0 AND 6 THEN '01'
+                        WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 7 AND 13 THEN '02'
+                        WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 14 AND 20 THEN '03'
+                        ELSE '04'
+                   END
+                WHERE pc.id = #{customerId}
+                  AND pc.sales_user_id = #{currentUserId}
+            </when>
+            <otherwise>
+                SELECT
+                    child.integrated_customer_id AS customerId,
+                    child.name AS childName,
+                    child.gender AS childGender,
+                    TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) AS childAge,
+                    child.birth_date AS childBirthDate,
+                    NULL AS consultStatusCode,
+                    NULL AS consultStatusName,
+                    '02' AS conversionStatusCode,
+                    conversion.code_name AS conversionStatusName,
+                    (
+                        SELECT cr.report_url
+                        FROM customer_report cr
+                        WHERE cr.customer_id = child.integrated_customer_id
+                          AND cr.conversion_status_code = '02'
+                        ORDER BY cr.created_at DESC, cr.id DESC
+                        LIMIT 1
+                    ) AS reportUrl,
+                    child.lifecycle_code AS lifeStageCode,
+                    lifecycle.code_name AS lifeStageName,
+                    child.insurance_age_shift_date AS insuranceAgeShiftDate,
+                    parent.integrated_customer_id AS parentCustomerId,
+                    parent.name AS guardianName,
+                    CASE
+                        WHEN parent.gender = 'MALE' THEN '01'
+                        WHEN parent.gender = 'FEMALE' THEN '02'
+                        ELSE NULL
+                    END AS relationshipCode,
+                    relationship.code_name AS relationshipName,
+                    parent.phone AS guardianPhone,
+                    parent.address AS guardianAddress,
+                    TIMESTAMPDIFF(YEAR, parent.birth_date, CURDATE()) AS guardianAge
+                FROM integrated_customer child
+                LEFT JOIN integrated_customer parent
+                    ON parent.integrated_customer_id = child.parent_id
+                LEFT JOIN common_code conversion
+                    ON conversion.group_code = 'CONVERSION_STATUS'
+                   AND conversion.code_value = '02'
+                LEFT JOIN common_code lifecycle
+                    ON lifecycle.group_code = 'LIFECYCLE'
+                   AND lifecycle.code_value = child.lifecycle_code
+                LEFT JOIN common_code relationship
+                    ON relationship.group_code = 'RELATIONSHIP'
+                   AND relationship.code_value = CASE
+                        WHEN parent.gender = 'MALE' THEN '01'
+                        WHEN parent.gender = 'FEMALE' THEN '02'
+                        ELSE NULL
+                   END
+                WHERE child.integrated_customer_id = #{customerId}
+                  AND child.sales_user_id = #{currentUserId}
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectCustomerBadges" resultType="CustomerBadge">
+        SELECT DISTINCT
+            dai.trigger_type_code AS code,
+            trigger_code.code_name AS name
+        FROM daily_action_item dai
+        INNER JOIN common_code trigger_code
+            ON trigger_code.group_code = 'TRIGGER_TYPE'
+           AND trigger_code.code_value = dai.trigger_type_code
+        WHERE dai.customer_id = #{customerId}
+          AND dai.conversion_status_code = #{conversionStatusCode}
+          AND dai.sales_user_id = #{currentUserId}
+          AND dai.is_completed = FALSE
+          AND dai.trigger_type_code IN ('06', '07', '08')
+        ORDER BY dai.trigger_type_code
+    </select>
+
+</mapper>
