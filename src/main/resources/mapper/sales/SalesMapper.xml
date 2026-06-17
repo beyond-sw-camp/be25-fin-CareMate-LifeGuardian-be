@@ -246,7 +246,7 @@
         ROW_NUMBER() OVER (
         PARTITION BY dai.conversion_status_code, dai.customer_id
         ORDER BY
-        dai.target_date ASC,
+        dai.target_date DESC,
         dai.id DESC
         ) AS rn
         FROM daily_action_item dai
