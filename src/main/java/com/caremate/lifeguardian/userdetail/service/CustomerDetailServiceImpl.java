@@ -1,6 +1,8 @@
 package com.caremate.lifeguardian.userdetail.service;
 
 import com.caremate.lifeguardian.common.exception.BaseException;
+import com.caremate.lifeguardian.userdetail.dto.response.CustomerBasicInfoAlert;
+import com.caremate.lifeguardian.userdetail.dto.response.CustomerBasicInfoBadge;
 import com.caremate.lifeguardian.userdetail.dto.response.CustomerBasicInfoRow;
 import com.caremate.lifeguardian.userdetail.dto.response.CustomerBadgeRow;
 import com.caremate.lifeguardian.userdetail.dto.response.CustomerBasicInfoResponse;
@@ -49,18 +51,18 @@ public class CustomerDetailServiceImpl implements CustomerDetailService {
                 conversionStatusCode
         ));
 
-        List<CustomerBasicInfoResponse.Badge> badges = new ArrayList<>();
+        List<CustomerBasicInfoBadge> badges = new ArrayList<>();
         for (CustomerBadgeRow badge : customerDetailMapper.selectCustomerBadges(
                 customerId,
                 conversionStatusCode,
                 currentUserId
         )) {
-            badges.add(CustomerBasicInfoResponse.Badge.builder()
+            badges.add(CustomerBasicInfoBadge.builder()
                     .code(badge.getCode())
                     .name(badge.getName())
                     .build());
         }
-        badges.add(CustomerBasicInfoResponse.Badge.builder()
+        badges.add(CustomerBasicInfoBadge.builder()
                 .code("BASIC_INFO")
                 .name("기본정보 제공고객")
                 .build());
@@ -68,12 +70,26 @@ public class CustomerDetailServiceImpl implements CustomerDetailService {
         return CustomerBasicInfoResponse.builder()
                 .customerId(row.getCustomerId())
                 .conversionStatusCode(row.getConversionStatusCode())
+                .conversionStatusName(row.getConversionStatusName())
                 .reportUrl(row.getReportUrl())
+                .childName(row.getChildName())
+                .childGender(toDisplayGender(row.getChildGender()))
+                .childAge(row.getChildAge())
+                .childBirthDate(row.getChildBirthDate())
+                .consultStatusCode(row.getConsultStatusCode())
+                .consultStatusName(row.getConsultStatusName())
+                .lifeStageCode(row.getLifeStageCode())
+                .lifeStageName(row.getLifeStageName())
+                .insuranceAgeShiftDate(row.getInsuranceAgeShiftDate())
+                .parentCustomerId(row.getParentCustomerId())
+                .guardianName(row.getGuardianName())
+                .relationshipCode(row.getRelationshipCode())
+                .relationshipName(row.getRelationshipName())
+                .guardianPhone(row.getGuardianPhone())
+                .guardianAddress(row.getGuardianAddress())
+                .guardianAge(row.getGuardianAge())
                 .alert(createAlert(row.getInsuranceAgeShiftDate()))
                 .badges(badges)
-                .child(createChild(row))
-                .lifeCycle(createLifeCycle(row))
-                .guardian(createGuardian(row))
                 .build();
     }
 
@@ -108,7 +124,7 @@ public class CustomerDetailServiceImpl implements CustomerDetailService {
         );
     }
 
-    private CustomerBasicInfoResponse.Alert createAlert(LocalDate shiftDate) {
+    private CustomerBasicInfoAlert createAlert(LocalDate shiftDate) {
         if (shiftDate == null) {
             return null;
         }
@@ -119,60 +135,11 @@ public class CustomerDetailServiceImpl implements CustomerDetailService {
         }
 
         String level = remainingDays <= 7 ? "URGENT" : "WARNING";
-        return CustomerBasicInfoResponse.Alert.builder()
+        return CustomerBasicInfoAlert.builder()
                 .title("상령일 도래 - 상담 필요")
                 .description("보험 나이 상령일까지 %d일 남았습니다. 고객에게 보장 점검을 안내하세요."
                         .formatted(remainingDays))
                 .level(level)
-                .build();
-    }
-
-    private CustomerBasicInfoResponse.Child createChild(CustomerBasicInfoRow row) {
-        return CustomerBasicInfoResponse.Child.builder()
-                .name(row.getChildName())
-                .gender(toDisplayGender(row.getChildGender()))
-                .age(row.getChildAge())
-                .birthDate(row.getChildBirthDate())
-                .consultStatus(codeName(
-                        row.getConsultStatusCode(),
-                        row.getConsultStatusName()
-                ))
-                .conversionStatus(codeName(
-                        row.getConversionStatusCode(),
-                        row.getConversionStatusName()
-                ))
-                .build();
-    }
-
-    private CustomerBasicInfoResponse.LifeCycle createLifeCycle(CustomerBasicInfoRow row) {
-        return CustomerBasicInfoResponse.LifeCycle.builder()
-                .lifeStageCode(row.getLifeStageCode())
-                .lifeStageName(row.getLifeStageName())
-                .insuranceAgeShiftDate(row.getInsuranceAgeShiftDate())
-                .build();
-    }
-
-    private CustomerBasicInfoResponse.Guardian createGuardian(CustomerBasicInfoRow row) {
-        return CustomerBasicInfoResponse.Guardian.builder()
-                .parentCustomerId(row.getParentCustomerId())
-                .name(row.getGuardianName())
-                .relation(codeName(
-                        row.getRelationshipCode(),
-                        row.getRelationshipName()
-                ))
-                .phone(row.getGuardianPhone())
-                .address(row.getGuardianAddress())
-                .age(row.getGuardianAge())
-                .build();
-    }
-
-    private CustomerBasicInfoResponse.CodeName codeName(String code, String name) {
-        if (code == null && name == null) {
-            return null;
-        }
-        return CustomerBasicInfoResponse.CodeName.builder()
-                .code(code)
-                .name(name)
                 .build();
     }
 

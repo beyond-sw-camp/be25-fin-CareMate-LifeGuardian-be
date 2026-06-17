@@ -12,62 +12,29 @@ public class CustomerBasicInfoResponse {
 
     private Long customerId;
     private String conversionStatusCode;
+    private String conversionStatusName;
     private String reportUrl;
-    private Alert alert;
-    private List<Badge> badges;
-    private Child child;
-    private LifeCycle lifeCycle;
-    private Guardian guardian;
 
-    @Getter
-    @Builder
-    public static class Alert {
-        private String title;
-        private String description;
-        private String level;
-    }
+    private String childName;
+    private String childGender;
+    private Integer childAge;
+    private LocalDate childBirthDate;
 
-    @Getter
-    @Builder
-    public static class Badge {
-        private String code;
-        private String name;
-    }
+    private String consultStatusCode;
+    private String consultStatusName;
 
-    @Getter
-    @Builder
-    public static class Child {
-        private String name;
-        private String gender;
-        private Integer age;
-        private LocalDate birthDate;
-        private CodeName consultStatus;
-        private CodeName conversionStatus;
-    }
+    private String lifeStageCode;
+    private String lifeStageName;
+    private LocalDate insuranceAgeShiftDate;
 
-    @Getter
-    @Builder
-    public static class LifeCycle {
-        private String lifeStageCode;
-        private String lifeStageName;
-        private LocalDate insuranceAgeShiftDate;
-    }
+    private Long parentCustomerId;
+    private String guardianName;
+    private String relationshipCode;
+    private String relationshipName;
+    private String guardianPhone;
+    private String guardianAddress;
+    private Integer guardianAge;
 
-    @Getter
-    @Builder
-    public static class Guardian {
-        private Long parentCustomerId;
-        private String name;
-        private CodeName relation;
-        private String phone;
-        private String address;
-        private Integer age;
-    }
-
-    @Getter
-    @Builder
-    public static class CodeName {
-        private String code;
-        private String name;
-    }
+    private CustomerBasicInfoAlert alert;
+    private List<CustomerBasicInfoBadge> badges;
 }
