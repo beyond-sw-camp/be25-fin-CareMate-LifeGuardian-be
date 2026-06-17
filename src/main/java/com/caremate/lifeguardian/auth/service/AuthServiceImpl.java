@@ -11,6 +11,7 @@ import com.caremate.lifeguardian.member.domain.SalesUser;
 import com.caremate.lifeguardian.member.domain.enums.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -285,5 +286,32 @@ public class AuthServiceImpl implements AuthService {
 				.role(role.name())
 				.isFirstLogin(user.getIsTempPassword())
 				.build();
+	}
+
+	@Override
+	@Transactional
+	public void logout(
+			Long userId,
+			String ipAddress,
+			String userAgent
+	) {
+		// Redis Refresh Token 삭제
+		String redisKey = RedisKeyGenerator.refreshToken(userId);
+		redisTemplate.delete(redisKey);
+
+		// DB Refresh Token 이력 무효화 처리
+		authMapper.blacklistPreviousTokens(userId);
+
+		// 로그아웃 감사 로그 저장
+		authMapper.insertAuditLog(
+				userId,
+				"06", // AUDIT_ACTION: LOGOUT 코드값에 맞게 수정
+				ipAddress,
+				userAgent,
+				"로그아웃"
+		);
+
+		// 현재 요청의 인증 정보 제거
+		SecurityContextHolder.clearContext();
 	}
 }
