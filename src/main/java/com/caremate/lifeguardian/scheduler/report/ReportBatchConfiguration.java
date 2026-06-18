@@ -2,7 +2,6 @@ package com.caremate.lifeguardian.scheduler.report;
 
 import com.caremate.lifeguardian.report.dto.internal.ReportTargetDto;
 import com.caremate.lifeguardian.report.dto.response.ReportCreateResultDto;
-import com.caremate.lifeguardian.report.mapper.ReportBatchMapper;
 import com.caremate.lifeguardian.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +19,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 리포트 생성 대상 조회와 고객별 생성 처리를 수행하는 Spring Batch Job을 구성한다.
  */
 @Slf4j
 @Configuration

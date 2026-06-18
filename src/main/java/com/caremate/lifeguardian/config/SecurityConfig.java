@@ -75,6 +75,7 @@ public class SecurityConfig {
                                 "/api/v1/potential-customers/parent/search",
                                 "/api/v1/potential-customers/{potentialCustomerId}",
                                 "/api/v1/auth/login",
+                                "/api/v1/dashboard/**",
                                 "/api/v1/reports/**",
                                 "/api/v1/customer-reports/send/**",
                                 "/oauth2/**",                   // OAuth2 리다이렉트 경로
