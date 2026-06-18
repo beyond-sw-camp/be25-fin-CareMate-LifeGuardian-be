@@ -1,27 +1,44 @@
 package com.caremate.lifeguardian.member.service;
 
-import com.caremate.lifeguardian.common.exception.BaseException;
-import com.caremate.lifeguardian.common.exception.RemainingCustomerConflictException;
-import com.caremate.lifeguardian.member.domain.SalesUser;
-import com.caremate.lifeguardian.member.domain.SalesUserPiiSecure;
-import com.caremate.lifeguardian.member.dto.request.*;
-import com.caremate.lifeguardian.member.dto.response.*;
-import com.caremate.lifeguardian.member.mapper.BranchMapper;
-import com.caremate.lifeguardian.member.mapper.SalesUserMapper;
-import com.caremate.lifeguardian.member.mapper.SalesUserPiiSecureMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import com.caremate.lifeguardian.common.exception.BaseException;
+import com.caremate.lifeguardian.common.exception.RemainingCustomerConflictException;
+import com.caremate.lifeguardian.common.redis.RedisKeyGenerator;
+import com.caremate.lifeguardian.common.redis.RedisService;
+import com.caremate.lifeguardian.member.domain.SalesUser;
+import com.caremate.lifeguardian.member.domain.SalesUserPiiSecure;
+import com.caremate.lifeguardian.member.dto.request.SalesUserCustomerTransferRequest;
+import com.caremate.lifeguardian.member.dto.request.SalesUserPiiSecureSearchRequest;
+import com.caremate.lifeguardian.member.dto.request.SalesUserRegisterRequest;
+import com.caremate.lifeguardian.member.dto.request.SalesUserSearchRequest;
+import com.caremate.lifeguardian.member.dto.request.SalesUserStatusUpdateRequest;
+import com.caremate.lifeguardian.member.dto.response.SalesUserCustomerTransferResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserInfo;
+import com.caremate.lifeguardian.member.dto.response.SalesUserListResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserPiiSecureInfo;
+import com.caremate.lifeguardian.member.dto.response.SalesUserPiiSecureListResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserRegisterResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserRetireResponse;
+import com.caremate.lifeguardian.member.dto.response.SalesUserStatusUpdateResponse;
+import com.caremate.lifeguardian.member.mapper.BranchMapper;
+import com.caremate.lifeguardian.member.mapper.SalesUserMapper;
+import com.caremate.lifeguardian.member.mapper.SalesUserPiiSecureMapper;
+import com.caremate.lifeguardian.member.mapper.TokenManagementMapper;
+import com.caremate.lifeguardian.member.service.SalesUserService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -31,6 +48,8 @@ public class SalesUserServiceImpl implements SalesUserService {
     private final SalesUserMapper salesUserMapper;
     private final BranchMapper branchMapper;
     private final PasswordEncoder passwordEncoder;
+    private final TokenManagementMapper tokenManagementMapper;
+    private final RedisService redisService;
     private final SalesUserPiiSecureMapper salesUserPiiSecureMapper;
 
     private static final String CHAR_LOWER = "abcdefghijklmnopqrstuvwxyz";
@@ -40,7 +59,10 @@ public class SalesUserServiceImpl implements SalesUserService {
     private static final String ALLOWED_CHARS = CHAR_LOWER + CHAR_UPPER + NUMBER + OTHER_CHAR;
     private static final SecureRandom random = new SecureRandom();
 
-    // 신입 영업사원을 등록, 사번과 최초 1회성 임시 비밀번호를 반환
+    /**
+     * 신입 영업사원을 등록하고 자동 채번된 사번과 최초 1회성 임시 비밀번호를 반환합니다.
+     */
+    @Override
     @Transactional
     public SalesUserRegisterResponse registerSalesUser(SalesUserRegisterRequest request) {
         log.info("신규 영업사원 등록 프로세스 시작 - 이름: {}, 지점 ID: {}", request.getName(), request.getBranchId());
@@ -111,7 +133,9 @@ public class SalesUserServiceImpl implements SalesUserService {
                 .build();
     }
 
-    // 8자리의 안전한 임시 비밀번호를 무작위 생성
+    /**
+     * 영문 대소문자, 숫자, 특수문자가 1자 이상 포함된 8자리의 안전한 임시 비밀번호를 무작위로 생성합니다.
+     */
     private String generateTemporaryPassword() {
         StringBuilder password = new StringBuilder(8);
 
@@ -138,7 +162,9 @@ public class SalesUserServiceImpl implements SalesUserService {
         return new String(passwordArray);
     }
 
-    // 조건에 부합하는 영업사원 목록 페이징 조회
+    /**
+     * 조건에 부합하는 영업사원 목록을 페이징하여 조회합니다.
+     */
     @Override
     @Transactional(readOnly = true)
     public SalesUserListResponse getSalesUserList(SalesUserSearchRequest searchRequest) {
@@ -146,14 +172,14 @@ public class SalesUserServiceImpl implements SalesUserService {
                 searchRequest.getKeyword(), searchRequest.getStatusCode(), searchRequest.getPage(),
                 searchRequest.getSize());
 
-        // 전체 데이터 개수 카운트
+        // 1. 전체 데이터 개수 카운트
         long totalElements = salesUserMapper.countSalesUsers(searchRequest);
 
-        // 전체 페이지 수 계산
+        // 2. 전체 페이지 수 계산
         int size = searchRequest.getSafeSize();
         int totalPages = (int) Math.ceil((double) totalElements / size);
 
-        // 데이터가 존재하지 않는 경우 빈 리스트 반환
+        // 3. 데이터가 존재하지 않는 경우 가벼운 빈 리스트 반환
         if (totalElements == 0) {
             return SalesUserListResponse.builder()
                     .totalElements(0L)
@@ -162,10 +188,10 @@ public class SalesUserServiceImpl implements SalesUserService {
                     .build();
         }
 
-        // 페이징 데이터 목록 조회
+        // 4. 페이징 데이터 목록 조회 (N+1 성능 최적화 완료)
         List<SalesUserInfo> content = salesUserMapper.selectSalesUserList(searchRequest);
 
-        // 불변 Response DTO 조립 반환
+        // 5. 불변 Response DTO 조립 반환
         return SalesUserListResponse.builder()
                 .totalElements(totalElements)
                 .totalPages(totalPages)
@@ -173,7 +199,9 @@ public class SalesUserServiceImpl implements SalesUserService {
                 .build();
     }
 
-    // 특정 영업사원의 계정 상태를 변경하고, 퇴사/정지인 경우 세션을 무효화합니다.
+    /**
+     * 특정 영업사원의 계정 상태를 변경하고, 퇴사/정지인 경우 세션을 무효화합니다.
+     */
     @Override
     @Transactional
     public SalesUserStatusUpdateResponse changeSalesUserStatus(Long userId, SalesUserStatusUpdateRequest request) {
@@ -215,8 +243,6 @@ public class SalesUserServiceImpl implements SalesUserService {
 
         // 4. 퇴사/정지('02') 상태로 정상 전이 시 즉각 세션 파기
         if ("02".equals(newStatusCode)) {
-            // TODO: 리프레시 토큰 및 Redis 구현 후 활성화 예정
-            /*
             // 4-1. DB 내 Refresh Token 만료 처리 (블랙리스트)
             int invalidatedCount = tokenManagementMapper.blacklistTokensByUserId(userId);
             log.info("DB Refresh Token 무효화 처리 완료 - 대상 유저 ID: {}, 무효화 건수: {}", userId, invalidatedCount);
@@ -227,7 +253,6 @@ public class SalesUserServiceImpl implements SalesUserService {
                 redisService.delete(redisKey);
                 log.info("Redis Refresh Token 캐시 파기 완료 - Key: {}", redisKey);
             }
-            */
         }
 
         // 5. 공통 코드 매핑에 맞춰 statusName 제공 (01 -> 활성(ACTIVE), 02 -> 퇴사/정지(RETIRED))
@@ -240,33 +265,35 @@ public class SalesUserServiceImpl implements SalesUserService {
                 .build();
     }
 
-    // 영업사원을 영구 퇴사 및 PII 및 TODO 기기 세션을 일괄 파기합니다.
+    /**
+     * 특정 영업사원을 영구 퇴사 처리하고, 개인정보 격리(PII Secure) 및 기기 세션을 일괄 파기합니다.
+     */
     @Override
     @Transactional
     public SalesUserRetireResponse retireSalesUser(Long userId) {
         log.info("퇴사자 비활성화 및 세션 파기 요청 수신 - userId: {}", userId);
 
-        // 대상 영업사원 존재 여부 검증
+        // 1. 대상 영업사원 존재 여부 검증
         SalesUser salesUser = salesUserMapper.findById(userId);
         if (salesUser == null) {
             log.warn("퇴사 처리 실패 - 존재하지 않는 영업사원 ID: {}", userId);
             throw new BaseException(404, "요청하신 영업사원 정보를 찾을 수 없습니다.");
         }
 
-        // 이미 퇴사 상태인지 검증
+        // 2. 이미 퇴사('02') 상태인지 검증 (중복 퇴사 차단)
         if ("02".equals(salesUser.getStatusCode())) {
             log.warn("퇴사 처리 실패 - 이미 퇴사 처리된 사원입니다. userId: {}", userId);
             throw new BaseException(400, "이미 퇴사/정지 처리된 영업사원입니다.");
         }
 
-        // 잔여 고객 검증
+        // 3. 잔여 고객 검증 (1명이라도 존재 시 퇴사 전면 차단)
         long remainingCount = salesUserMapper.countRemainingCustomers(userId);
         if (remainingCount > 0) {
             log.warn("퇴사 처리 차단 - 잔여 고객 존재: {}명, userId: {}", remainingCount, userId);
             throw new BaseException(409, "잔여 고객이 존재하여 퇴사 처리가 불가합니다. 고객 이관을 먼저 완료해주세요.");
         }
 
-        // PII 데이터 보안 격리 처리
+        // 4. PII 데이터 보안 격리 처리 (3년 법정 의무 보관)
         LocalDateTime retiredAt = LocalDateTime.now();
         LocalDateTime purgedAt = retiredAt.plusYears(3);
 
@@ -279,11 +306,11 @@ public class SalesUserServiceImpl implements SalesUserService {
                 .purgedAt(purgedAt)
                 .build();
 
-        // pii 격리 보안 보관 테이블 적재
+        // 4-1. pii 격리 보안 보관 테이블 적재 (INSERT)
         salesUserPiiSecureMapper.insertPiiSecure(piiSecure);
         log.info("퇴사자 PII 보안 격리 테이블 이관 완료 - 사번: {}", salesUser.getEmployeeId());
 
-        // 원본 sales_user 테이블 내 PII 데이터 소프트 마스킹 처리
+        // 4-2. 원본 sales_user 테이블 내 PII 데이터 소프트 마스킹 처리 (NOT NULL 제약조건 우회)
         String maskedPhone = "000-0000-0000";
         String maskedEmail = "retired_" + userId + "@company.com";
         java.time.LocalDate maskedBirthDate = java.time.LocalDate.of(1900, 1, 1);
@@ -291,13 +318,11 @@ public class SalesUserServiceImpl implements SalesUserService {
         salesUserMapper.secureOriginalPii(userId, maskedPhone, maskedEmail, maskedBirthDate);
         log.info("원본 테이블 내 PII 소프트 마스킹 완료 - userId: {}", userId);
 
-        // 사원 상태 코드 변경
+        // 5. 사원 상태 코드 변경 ('02' 퇴사)
         salesUser.changeStatus("02");
         salesUserMapper.updateStatus(userId, "02");
         log.info("영업사원 계정 상태 퇴사('02') 전이 완료 - userId: {}", userId);
 
-        // TODO: 리프레시 토큰 및 Redis 구현 후 활성화 예정
-        /*
         // 6. 세션 및 토큰 만료 처리 (DB & Redis)
         // 6-1. DB Refresh Token 블랙리스트 무효화 및 만료 개수 리턴
         int invalidatedCount = tokenManagementMapper.blacklistTokensByUserId(userId);
@@ -309,10 +334,8 @@ public class SalesUserServiceImpl implements SalesUserService {
             redisService.delete(redisKey);
             log.info("Redis Refresh Token 캐시 강제 삭제 완료 - Key: {}", redisKey);
         }
-        */
-        int invalidatedCount = 0; // 컴파일 에러 방지용 임시 반환값
 
-        // 7. Response DTO 조립 반환
+        // 7. Response DTO 조립 반환 (retiredAt 포맷팅: yyyy-MM-dd HH:mm:ss)
         String formattedRetiredAt = retiredAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         return SalesUserRetireResponse.builder()
@@ -324,7 +347,9 @@ public class SalesUserServiceImpl implements SalesUserService {
                 .build();
     }
 
-    // 퇴사 예정자의 모든 잔여 고객을 다른 활성 영업사원에게 일괄 이관 및 이력 기록
+    /**
+     * 퇴사 예정자(또는 부서 이동자)의 모든 잔여 고객을 다른 활성 영업사원에게 일괄 이관하고 이력을 기록합니다.
+     */
     @Override
     @Transactional
     public SalesUserCustomerTransferResponse transferCustomers(Long userId, SalesUserCustomerTransferRequest request,
@@ -380,7 +405,9 @@ public class SalesUserServiceImpl implements SalesUserService {
     }
 
 
-    // 분리 보관 중인 퇴사자 PII 보존 현황 페이징 조회
+    /**
+     * 분리 보관 중인 퇴사자 PII 보존 현황을 페이징 조회합니다.
+     */
     @Override
     @Transactional(readOnly = true)
     public SalesUserPiiSecureListResponse getPiiSecureList(SalesUserPiiSecureSearchRequest request) {
