@@ -25,13 +25,19 @@ public class WebformController {
      * @return 웹폼 발송 결과
      */
     @Operation(summary = "웹폼 개별 발송", description = "선택한 고객에게 웹폼을 발송합니다.")
-    @PostMapping("/{customerId}/send")
+    @PostMapping("/{sendSource}/{conversionStatusCode}/{customerId}/send")
     public ApiResponse<WebformSendResponse> sendWebform(
+            @PathVariable String sendSource,
+            @PathVariable String conversionStatusCode,
             @PathVariable Long customerId
     ) {
 
         WebformSendResponse response =
-                webformService.sendWebform(customerId);
+                webformService.sendWebform(
+                        sendSource,
+                        conversionStatusCode,
+                        customerId
+                );
 
         return ApiResponse.success(
                 200,
@@ -41,11 +47,9 @@ public class WebformController {
     }
 
     /**
-     * 웹폼 일괄 발송 API
-     *
-     * 서버가 직접 오늘 웹폼 발송 대상 고객을 조회한다.
+     * 대시보드용 웹폼 일괄 발송 API
      */
-    @Operation(summary = "웹폼 일괄 발송", description = "오늘 웹폼 발송 대상 고객에게 웹폼을 일괄 발송합니다.")
+    @Operation(summary = "대시보드 웹폼 일괄 발송", description = "오늘 연락 고객 목록의 잠재고객에게 웹폼을 일괄 발송합니다.")
     @PostMapping("/send/bulk")
     public ApiResponse<List<WebformSendResponse>> sendBulkWebform() {
 
@@ -55,6 +59,23 @@ public class WebformController {
         return ApiResponse.success(
                 200,
                 "웹폼 일괄 발송에 성공했습니다.",
+                response
+        );
+    }
+
+    /**
+     * 영업현황용 웹폼 일괄 발송 API
+     */
+    @Operation(summary = "영업현황 웹폼 일괄 발송", description = "영업현황 목록의 잠재고객과 통합고객에게 웹폼을 일괄 발송합니다.")
+    @PostMapping("/sales-status/send/bulk")
+    public ApiResponse<List<WebformSendResponse>> sendSalesStatusBulkWebform() {
+
+        List<WebformSendResponse> response =
+                webformService.sendSalesStatusBulkWebform();
+
+        return ApiResponse.success(
+                200,
+                "영업현황 웹폼 일괄 발송에 성공했습니다.",
                 response
         );
     }
