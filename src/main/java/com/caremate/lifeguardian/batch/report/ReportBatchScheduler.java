@@ -1,4 +1,4 @@
-package com.caremate.lifeguardian.scheduler.report;
+package com.caremate.lifeguardian.batch.report;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
