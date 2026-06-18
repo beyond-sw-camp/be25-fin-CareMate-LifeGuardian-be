@@ -1,5 +1,6 @@
 package com.caremate.lifeguardian.recommendai.service;
 
+import com.caremate.lifeguardian.common.exception.BaseException;
 import com.caremate.lifeguardian.recommendation.domain.InsurancePlan;
 import com.caremate.lifeguardian.recommendation.domain.RecommendationLog;
 import com.caremate.lifeguardian.recommendation.domain.WebformResponse;
@@ -42,13 +43,13 @@ public class RecommendationRagServiceImpl implements RecommendationRagService {
         // 1. MariaDB: 웹폼 데이터 원천 조회 (고객 ID 기반 최신 웹폼 조회)
         WebformResponse webform = recommendAiMapper.findLatestWebformByCustomerId(customerId);
         if (webform == null) {
-            throw new IllegalArgumentException("해당 고객의 웹폼 응답 내역이 존재하지 않습니다. customerId: " + customerId);
+            throw new BaseException(500, "해당 고객의 웹폼 응답 내역이 존재하지 않습니다. customerId: " + customerId);
         }
 
         // 2. 고객 정보 조회 및 나이 계산
         CustomerInfoDto customer = recommendAiMapper.findCustomerInfo(customerId);
         if (customer == null) {
-            throw new IllegalArgumentException("고객 정보가 존재하지 않습니다: " + customerId);
+            throw new BaseException(500, "고객 정보가 존재하지 않습니다: " + customerId);
         }
         int childAge = Period.between(customer.getBirthDate(), LocalDate.now()).getYears();
 

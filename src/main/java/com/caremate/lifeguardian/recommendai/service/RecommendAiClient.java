@@ -1,5 +1,6 @@
 package com.caremate.lifeguardian.recommendai.service;
 
+import com.caremate.lifeguardian.common.exception.BaseException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,7 +30,7 @@ public class RecommendAiClient {
     public List<String> getRecommendedRiders(String queryText, int age) {
         try {
             LambdaRequest request = new LambdaRequest(queryText, age);
-            
+
             LambdaResponse response = restClient.post()
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
@@ -39,10 +40,12 @@ public class RecommendAiClient {
             if (response != null && response.getRecommendedRiders() != null) {
                 return response.getRecommendedRiders();
             }
-            return Collections.emptyList();
+            throw new BaseException(500, "AI 추천 서버로부터 올바른 응답을 받지 못했습니다.");
+        } catch (BaseException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to connect or fetch recommendation from AI Lambda server: {}", e.getMessage(), e);
-            return Collections.emptyList();
+            throw new BaseException(500, "AI 추천 서버와의 연결에 실패했습니다. (서버 상태를 확인해 주세요)");
         }
     }
 
