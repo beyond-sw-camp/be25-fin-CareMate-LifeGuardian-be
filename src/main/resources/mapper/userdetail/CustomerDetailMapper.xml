@@ -5,15 +5,16 @@
 
 <mapper namespace="com.caremate.lifeguardian.userdetail.mapper.CustomerDetailMapper">
 
+    <!-- 고객 상세 | 고객 존재 여부 판단  -->
     <select id="existsCustomer" resultType="boolean">
         <choose>
-            <when test="conversionStatusCode == '01'">
+            <when test="conversionStatusCode == '01'"> # 01 = 잠재고객 조회
                 SELECT COUNT(*) > 0
                 FROM potential_customer
                 WHERE id = #{customerId}
             </when>
             <otherwise>
-                SELECT COUNT(*) > 0
+                SELECT COUNT(*) > 0 # 그외 통합고객 간주
                 FROM integrated_customer
                 WHERE integrated_customer_id = #{customerId}
             </otherwise>
@@ -33,10 +34,10 @@
             conversion.code_name AS conversionStatusName,
             NULL AS reportUrl,
             CASE
-                WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 0 AND 6 THEN '01'
-                WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 7 AND 13 THEN '02'
-                WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 14 AND 20 THEN '03'
-                ELSE '04'
+            WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 0 AND 6 THEN '01'
+            WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 7 AND 13 THEN '02'
+            WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 14 AND 20 THEN '03'
+            WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) >= 21 THEN '04'
             END AS lifeStageCode,
             lifecycle.code_name AS lifeStageName,
             pc.insurance_age_shift_date AS insuranceAgeShiftDate,
@@ -65,7 +66,7 @@
                 WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 0 AND 6 THEN '01'
                 WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 7 AND 13 THEN '02'
                 WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) BETWEEN 14 AND 20 THEN '03'
-                ELSE '04'
+                WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) >= 21 THEN '04'
            END
         WHERE pc.id = #{customerId}
           AND pc.sales_user_id = #{currentUserId}
@@ -83,7 +84,12 @@
             '02' AS conversionStatusCode,
             conversion.code_name AS conversionStatusName,
             NULL AS reportUrl,
-            child.lifecycle_code AS lifeStageCode,
+            CASE
+                WHEN TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) BETWEEN 0 AND 6 THEN '01'
+                WHEN TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) BETWEEN 7 AND 13 THEN '02'
+                WHEN TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) BETWEEN 14 AND 20 THEN '03'
+                WHEN TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) >= 21 THEN '04'
+            END AS lifeStageCode,
             lifecycle.code_name AS lifeStageName,
             child.insurance_age_shift_date AS insuranceAgeShiftDate,
             parent.integrated_customer_id AS parentCustomerId,
@@ -104,7 +110,12 @@
            AND conversion.code_value = '02'
         LEFT JOIN common_code lifecycle
             ON lifecycle.group_code = 'LIFECYCLE'
-           AND lifecycle.code_value = child.lifecycle_code
+           AND lifecycle.code_value = CASE
+                WHEN TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) BETWEEN 0 AND 6 THEN '01'
+                WHEN TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) BETWEEN 7 AND 13 THEN '02'
+                WHEN TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) BETWEEN 14 AND 20 THEN '03'
+                WHEN TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) >= 21 THEN '04'
+           END
         LEFT JOIN common_code relationship
             ON relationship.group_code = 'RELATIONSHIP'
            AND relationship.code_value = CASE
