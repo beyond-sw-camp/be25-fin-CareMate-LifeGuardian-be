@@ -1,5 +1,6 @@
-package com.caremate.lifeguardian.scheduler.report;
+package com.caremate.lifeguardian.batch.report;
 
+import com.caremate.lifeguardian.batch.report.mapper.ReportBatchMapper;
 import com.caremate.lifeguardian.report.dto.internal.ReportTargetDto;
 import com.caremate.lifeguardian.report.dto.response.ReportCreateResultDto;
 import com.caremate.lifeguardian.report.service.ReportService;
@@ -18,18 +19,23 @@ import org.springframework.transaction.PlatformTransactionManager;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
+/*
+ * Step 방식: Tasklet 방식 -> 추후 chunk 방식 리팩토링 예정
+ *
  */
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
 public class ReportBatchConfiguration {
 
+    // JOB 이름
     public static final String JOB_NAME = "customerReportCreationJob";
 
-    private final ReportBatchMapper reportBatchMapper;
-    private final ReportService reportService;
+    // 실행 Mapper
+    private final ReportBatchMapper reportBatchMapper; // 리포트 생성 대상 고객 조회
+    private final ReportService reportService; // 리포트 생성
 
+    // Job 등록
     @Bean
     public Job customerReportCreationJob(
             JobRepository jobRepository,
@@ -40,6 +46,7 @@ public class ReportBatchConfiguration {
                 .build();
     }
 
+    // 리포트 생성 Step
     @Bean
     public Step customerReportCreationStep(
             JobRepository jobRepository,
