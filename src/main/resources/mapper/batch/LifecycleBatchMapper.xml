@@ -1,0 +1,15 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.caremate.lifeguardian.batch.lifecycle.mapper.LifecycleBatchMapper">
+
+    <update id="graduatePotentialCustomers">
+        UPDATE potential_customer
+        SET is_active = TRUE,
+            updated_at = NOW()
+        WHERE is_active = FALSE
+          AND birth_date IS NOT NULL
+          AND birth_date <![CDATA[<=]]> DATE_SUB(CURDATE(), INTERVAL 21 YEAR)
+    </update>
+
+</mapper>

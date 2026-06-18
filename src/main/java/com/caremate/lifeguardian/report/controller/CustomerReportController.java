@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "고객 리포트 발송 API", description = "생성된 고객 리포트를 개별 또는 일괄 발송합니다.")
+@Tag(name = "리포트 API", description = "고객 리포트 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/reports")

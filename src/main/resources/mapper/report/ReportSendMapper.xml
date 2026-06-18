@@ -27,11 +27,12 @@
             AND cr.conversion_status_code = #{conversionStatusCode}
         </if>
         AND (
-        (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId})
+        (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId} AND pc.is_active = FALSE)
         OR
         (
         cr.conversion_status_code = '02'
         AND ic.sales_user_id = #{currentUserId}
+        AND ic.birth_date > DATE_SUB(CURDATE(), INTERVAL 21 YEAR)
         AND EXISTS (
         SELECT 1
         FROM webform_response wr
@@ -75,11 +76,12 @@
                                     ON cr.conversion_status_code = '02'
                                         AND ic.integrated_customer_id = cr.customer_id
                  WHERE (
-                     (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId})
+                     (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId} AND pc.is_active = FALSE)
                          OR
                      (
                          cr.conversion_status_code = '02'
                              AND ic.sales_user_id = #{currentUserId}
+                             AND ic.birth_date > DATE_SUB(CURDATE(), INTERVAL 21 YEAR)
                              AND EXISTS (
                              SELECT 1
                              FROM webform_response wr

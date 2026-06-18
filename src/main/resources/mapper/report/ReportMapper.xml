@@ -50,6 +50,7 @@
            AND relation_code.code_value = pc.relationship_code
         WHERE #{conversionStatusCode} = '01'
           AND pc.id = #{customerId}
+          AND pc.is_active = FALSE
 
         UNION ALL
 
@@ -72,6 +73,7 @@
             ON parent.integrated_customer_id = child.parent_id
         WHERE #{conversionStatusCode} = '02'
           AND child.integrated_customer_id = #{customerId}
+          AND child.birth_date > DATE_SUB(CURDATE(), INTERVAL 21 YEAR)
     </select>
 
     <!-- 리포트 | 웹폼 상세정보 -->
