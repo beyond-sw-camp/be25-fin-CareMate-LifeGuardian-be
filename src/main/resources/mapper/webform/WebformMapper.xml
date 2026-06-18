@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.caremate.lifeguardian.webform.mapper.WebformMapper">
+
+    <!-- 웹폼 일괄 발송 대상 고객 조회 -->
+    <select id="findTodayWebformSendTargetCustomerIds"
+            resultType="java.lang.Long">
+
+        SELECT pc.id
+        FROM potential_customer pc
+        WHERE pc.sales_user_id = #{salesUserId}
+            AND pc.conversion_status_code = '01'
+
+            /* 오늘 생일인 고객 */
+            AND DATE_FORMAT(pc.birth_date, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+
+            /* 오늘 이미 웹폼 발송완료된 고객 제외 */
+            AND NOT EXISTS (
+                SELECT 1
+                FROM webform_issuance wi
+                WHERE wi.customer_id = pc.id
+                    AND wi.conversion_status_code = '01'
+                    AND wi.sales_user_id = #{salesUserId}
+                    AND wi.webform_status_code = '02'
+                    AND Date(wi.issued_at) = CURDATE()
+            )
+    </select>
+
+    <!-- 웹폼 발송 이력 저장 -->
+    <insert id="insetWebformIssuance">
+
+        INSERT INTO webform_issuance (
+             sales_user_id,
+             customer_id,
+             conversion_status_code,
+             uuid_token,
+             webform_status_code
+        )
+        VALUES (
+            #{salesUserId},
+            #{customerId},
+            #{conversionStatusCode},
+            #{uuidToken},
+            '02'
+        )
+    </insert>
+
+    <!-- UUID 토큰으로 고객 ID 조회 -->
+    <select id="findCustomerIdByUuidToken"
+            resultType="java.lang.Long">
+
+        SELECT customer_id
+        FROM webform_issuance
+        WHERE uuid_token = #{uuidToken}
+    </select>
+
+    <!-- 웹폼 회수 처리 -->
+    <update id="updateWebformCollected">
+
+        UPDATE webform_issuance
+        SET webform_status_code = '04',
+            collected_at = NOW()
+        WHERE uuid_token = #{uuidToken}
+    </update>
+
+    <!-- 잠재고객 상담 상태 변경 -->
+    <update id="updatePotentialCustomerConsultStatus">
+
+        UPDATE potential_customer
+        SET consult_status_code = '02',
+            webform_received_at = CURDATE()
+        WHERE id = #{customerId}
+    </update>
+</mapper>
