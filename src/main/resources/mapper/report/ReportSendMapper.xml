@@ -27,7 +27,7 @@
             AND cr.conversion_status_code = #{conversionStatusCode}
         </if>
         AND (
-        (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId})
+        (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId} AND pc.is_active = FALSE)
         OR
         (
         cr.conversion_status_code = '02'
@@ -75,7 +75,7 @@
                                     ON cr.conversion_status_code = '02'
                                         AND ic.integrated_customer_id = cr.customer_id
                  WHERE (
-                     (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId})
+                     (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId} AND pc.is_active = FALSE)
                          OR
                      (
                          cr.conversion_status_code = '02'

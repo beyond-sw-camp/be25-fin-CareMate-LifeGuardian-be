@@ -30,6 +30,7 @@
             AND wr.conversion_status_code = '01'
             AND YEAR(wr.received_at) = #{reportYear}
         WHERE pc.conversion_status_code = '01' -- 잠재고객
+          AND pc.is_active = FALSE
           AND NOT EXISTS (
             SELECT 1
             FROM customer_report cr

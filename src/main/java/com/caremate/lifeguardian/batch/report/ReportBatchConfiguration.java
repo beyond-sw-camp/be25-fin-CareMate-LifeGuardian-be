@@ -1,8 +1,8 @@
-package com.caremate.lifeguardian.scheduler.report;
+package com.caremate.lifeguardian.batch.report;
 
 import com.caremate.lifeguardian.report.dto.internal.ReportTargetDto;
 import com.caremate.lifeguardian.report.dto.response.ReportCreateResultDto;
-import com.caremate.lifeguardian.scheduler.report.mapper.ReportBatchMapper;
+import com.caremate.lifeguardian.report.mapper.ReportBatchMapper;
 import com.caremate.lifeguardian.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

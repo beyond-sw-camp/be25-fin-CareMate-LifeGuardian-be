@@ -50,6 +50,7 @@
            AND relation_code.code_value = pc.relationship_code
         WHERE #{conversionStatusCode} = '01'
           AND pc.id = #{customerId}
+          AND pc.is_active = FALSE
 
         UNION ALL
 
