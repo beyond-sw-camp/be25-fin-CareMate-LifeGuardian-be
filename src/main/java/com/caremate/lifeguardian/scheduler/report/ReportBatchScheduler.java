@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
- * 설정된 주기에 따라 고객 리포트 생성 Job을 실행한다.
+ * 설정된 주기에 따라 고객 리포트 생성 Job을 실행.
  */
 @Slf4j
 @Component
@@ -43,8 +43,9 @@ public class ReportBatchScheduler {
         this.customerReportCreationJob = customerReportCreationJob;
     }
 
+    // 기본 설정
     @Scheduled(
-            cron = "${app.report.batch.cron:0 0 2 * * *}",
+            cron = "${app.report.batch.cron:0 0 3 * * *}",
             zone = "${app.report.batch.zone:Asia/Seoul}"
     )
     public void runCustomerReportCreationJob() {

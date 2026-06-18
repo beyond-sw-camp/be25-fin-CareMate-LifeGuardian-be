@@ -1,4 +1,4 @@
-package com.caremate.lifeguardian.report.mapper;
+package com.caremate.lifeguardian.scheduler.report.mapper;
 
 import com.caremate.lifeguardian.report.dto.internal.ActionItemInsertDto;
 import com.caremate.lifeguardian.report.dto.internal.ReportTargetDto;
