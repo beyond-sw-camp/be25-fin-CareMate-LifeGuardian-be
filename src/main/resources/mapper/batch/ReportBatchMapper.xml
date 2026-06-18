@@ -1,7 +1,7 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.caremate.lifeguardian.report.mapper.ReportBatchMapper">
+<mapper namespace="com.caremate.lifeguardian.batch.report.mapper.ReportBatchMapper">
 
     <!-- 리포트 배치 | 리포트 생성대상 조회 -->
     <select id="selectReportTargets"
@@ -67,6 +67,7 @@
             AND wr.conversion_status_code = '02'
             AND YEAR(wr.received_at) = #{reportYear}
         where ic.sales_user_id IS NOT NULL
+          AND ic.birth_date > DATE_SUB(CURDATE(), INTERVAL 21 YEAR)
           AND NOT EXISTS (
             SELECT 1
             FROM customer_report cr

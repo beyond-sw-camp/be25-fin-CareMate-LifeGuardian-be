@@ -32,6 +32,7 @@
         (
         cr.conversion_status_code = '02'
         AND ic.sales_user_id = #{currentUserId}
+        AND ic.birth_date > DATE_SUB(CURDATE(), INTERVAL 21 YEAR)
         AND EXISTS (
         SELECT 1
         FROM webform_response wr
@@ -80,6 +81,7 @@
                      (
                          cr.conversion_status_code = '02'
                              AND ic.sales_user_id = #{currentUserId}
+                             AND ic.birth_date > DATE_SUB(CURDATE(), INTERVAL 21 YEAR)
                              AND EXISTS (
                              SELECT 1
                              FROM webform_response wr
