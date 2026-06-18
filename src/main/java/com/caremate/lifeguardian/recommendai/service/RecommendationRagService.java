@@ -1,6 +1,6 @@
 package com.caremate.lifeguardian.recommendai.service;
 
-import com.caremate.lifeguardian.recommendai.dto.RecommendAiResponse;
+import com.caremate.lifeguardian.recommendai.dto.response.RecommendAiResponse;
 
 public interface RecommendationRagService {
 

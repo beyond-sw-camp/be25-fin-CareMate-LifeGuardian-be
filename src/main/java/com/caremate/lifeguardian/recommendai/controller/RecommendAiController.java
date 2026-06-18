@@ -1,8 +1,8 @@
 package com.caremate.lifeguardian.recommendai.controller;
 
 import com.caremate.lifeguardian.common.ApiResponse;
-import com.caremate.lifeguardian.recommendai.dto.RecommendAiRequest;
-import com.caremate.lifeguardian.recommendai.dto.RecommendAiResponse;
+import com.caremate.lifeguardian.recommendai.dto.request.RecommendAiRequest;
+import com.caremate.lifeguardian.recommendai.dto.response.RecommendAiResponse;
 import com.caremate.lifeguardian.recommendai.service.RecommendationRagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

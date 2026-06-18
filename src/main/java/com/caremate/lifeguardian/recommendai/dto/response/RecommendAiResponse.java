@@ -1,15 +1,15 @@
-package com.caremate.lifeguardian.recommendai.dto;
+package com.caremate.lifeguardian.recommendai.dto.response;
 
+import com.caremate.lifeguardian.recommendai.dto.CoverageDto;
+import com.caremate.lifeguardian.recommendai.dto.ScoreDetailDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.util.List;
 
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

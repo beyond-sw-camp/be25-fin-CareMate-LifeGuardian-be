@@ -4,14 +4,12 @@ import com.caremate.lifeguardian.common.exception.BaseException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -50,7 +48,6 @@ public class RecommendAiClient {
     }
 
     @Getter
-    @Setter
     @NoArgsConstructor
     @AllArgsConstructor
     private static class LambdaRequest {
@@ -59,7 +56,6 @@ public class RecommendAiClient {
     }
 
     @Getter
-    @Setter
     @NoArgsConstructor
     @AllArgsConstructor
     private static class LambdaResponse {
