@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.caremate.lifeguardian.member.mapper.TokenManagementMapper">
+
+    <!-- 특정 영업사원의 모든 활성 Refresh Token 블랙리스트 업데이트 -->
+    <update id="blacklistTokensByUserId">
+        UPDATE token_management
+        SET is_blacklisted = TRUE
+        WHERE sales_user_id = #{salesUserId} AND is_blacklisted = FALSE
+    </update>
+
+</mapper>

@@ -58,12 +58,7 @@
         WHERE 1 = 1
 
         <if test="request.customerName != null and request.customerName.trim() != ''">
-            AND LOWER(REGEXP_REPLACE(cb.customer_name, '[[:space:]]+', ''))
-                LIKE CONCAT(
-                    '%',
-                    LOWER(REGEXP_REPLACE(#{request.customerName}, '[[:space:]]+', '')),
-                    '%'
-                )
+            AND LOWER(cb.customer_name) LIKE CONCAT('%', LOWER(#{request.customerName}), '%')
         </if>
 
         <if test="request.age != null">
@@ -72,6 +67,48 @@
 
         <if test="request.gender != null and request.gender != ''">
             AND cb.gender = #{request.gender}
+        </if>
+
+        <if test="request.customerStageCode != null and request.customerStageCode != ''">
+            AND cb.customer_type_code = #{request.customerStageCode}
+        </if>
+
+        <if test="request.consultStatusCode != null and request.consultStatusCode.size() > 0">
+            AND cb.customer_type_code = '01'
+            AND cb.consult_status_code IN
+            <foreach collection="request.consultStatusCode"
+                     item="code"
+                     open="("
+                     separator=","
+                     close=")">
+                #{code}
+            </foreach>
+        </if>
+
+        <if test="request.contractStatusCode != null and request.contractStatusCode.size() > 0">
+            AND cb.customer_type_code = '02'
+            AND (
+                SELECT c.contract_status_code
+                FROM contract c
+                WHERE c.integrated_customer_id = cb.customer_id
+                ORDER BY
+                    CASE c.contract_result_status_code
+                        WHEN '01' THEN 1
+                        WHEN '02' THEN 2
+                        WHEN '03' THEN 3
+                        ELSE 9
+                    END,
+                    c.updated_at DESC,
+                    c.id DESC
+                LIMIT 1
+            ) IN
+            <foreach collection="request.contractStatusCode"
+                     item="code"
+                     open="("
+                     separator=","
+                     close=")">
+                #{code}
+            </foreach>
         </if>
 
         <if test="request.contractStatusCodes != null and request.contractStatusCodes.size() > 0">
@@ -306,12 +343,7 @@
         WHERE 1 = 1
 
         <if test="request.customerName != null and request.customerName.trim() != ''">
-            AND LOWER(REGEXP_REPLACE(ce.customer_name, '[[:space:]]+', ''))
-                LIKE CONCAT(
-                    '%',
-                    LOWER(REGEXP_REPLACE(#{request.customerName}, '[[:space:]]+', '')),
-                    '%'
-                )
+            AND LOWER(ce.customer_name) LIKE CONCAT('%', LOWER(#{request.customerName}), '%')
         </if>
 
         <if test="request.age != null">
@@ -320,6 +352,34 @@
 
         <if test="request.gender != null and request.gender != ''">
             AND ce.gender = #{request.gender}
+        </if>
+
+        <if test="request.customerStageCode != null and request.customerStageCode != ''">
+            AND ce.customer_type_code = #{request.customerStageCode}
+        </if>
+
+        <if test="request.consultStatusCode != null and request.consultStatusCode.size() > 0">
+            AND ce.customer_type_code = '01'
+            AND ce.consult_status_code IN
+            <foreach collection="request.consultStatusCode"
+                     item="code"
+                     open="("
+                     separator=","
+                     close=")">
+                #{code}
+            </foreach>
+        </if>
+
+        <if test="request.contractStatusCode != null and request.contractStatusCode.size() > 0">
+            AND ce.customer_type_code = '02'
+            AND ce.contract_status_code IN
+            <foreach collection="request.contractStatusCode"
+                     item="code"
+                     open="("
+                     separator=","
+                     close=")">
+                #{code}
+            </foreach>
         </if>
 
         <if test="request.contractStatusCodes != null and request.contractStatusCodes.size() > 0">
