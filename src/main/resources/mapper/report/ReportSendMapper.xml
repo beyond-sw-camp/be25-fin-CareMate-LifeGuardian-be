@@ -75,32 +75,55 @@
                           LEFT JOIN integrated_customer ic
                                     ON cr.conversion_status_code = '02'
                                         AND ic.integrated_customer_id = cr.customer_id
-                 WHERE (
-                     (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId} AND pc.is_active = FALSE)
-                         OR
-                     (
-                         cr.conversion_status_code = '02'
-                             AND ic.sales_user_id = #{currentUserId}
-                             AND ic.birth_date > DATE_SUB(CURDATE(), INTERVAL 21 YEAR)
-                             AND EXISTS (
-                             SELECT 1
-                             FROM webform_response wr
-                             WHERE wr.customer_id = cr.customer_id
-                               AND wr.conversion_status_code = '02'
-                         )
-                         )
-                     )
-                   AND EXISTS (
-                     SELECT 1
-                     FROM daily_action_item dai
-                     WHERE dai.customer_id = cr.customer_id
-                       AND dai.conversion_status_code = cr.conversion_status_code
-                       AND dai.sales_user_id = #{currentUserId}
-                       AND dai.target_date = CURDATE()
-                       AND dai.is_completed = FALSE
-                 )
+                 WHERE 1 = 1
+                   <choose>
+                       <when test="reportIds != null and reportIds.size() > 0">
+                           AND (
+                               (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId})
+                                   OR
+                               (cr.conversion_status_code = '02' AND ic.sales_user_id = #{currentUserId})
+                           )
+                           AND cr.id IN
+                           <foreach collection="reportIds"
+                                    item="reportId"
+                                    open="("
+                                    separator=","
+                                    close=")">
+                               #{reportId}
+                           </foreach>
+                       </when>
+                       <otherwise>
+                           AND (
+                               (cr.conversion_status_code = '01' AND pc.sales_user_id = #{currentUserId} AND pc.is_active = FALSE)
+                                   OR
+                               (
+                                   cr.conversion_status_code = '02'
+                                       AND ic.sales_user_id = #{currentUserId}
+                                       AND ic.birth_date > DATE_SUB(CURDATE(), INTERVAL 21 YEAR)
+                                       AND EXISTS (
+                                       SELECT 1
+                                       FROM webform_response wr
+                                       WHERE wr.customer_id = cr.customer_id
+                                         AND wr.conversion_status_code = '02'
+                                   )
+                               )
+                           )
+                           AND EXISTS (
+                               SELECT 1
+                               FROM daily_action_item dai
+                               WHERE dai.customer_id = cr.customer_id
+                                 AND dai.conversion_status_code = cr.conversion_status_code
+                                 AND dai.sales_user_id = #{currentUserId}
+                                 AND dai.target_date = CURDATE()
+                                 AND dai.is_completed = FALSE
+                           )
+                       </otherwise>
+                   </choose>
              ) latest
-        WHERE rowNumber = 1
+        WHERE 1 = 1
+        <if test="reportIds == null or reportIds.size() == 0">
+            AND rowNumber = 1
+        </if>
         ORDER BY reportId
     </select>
 

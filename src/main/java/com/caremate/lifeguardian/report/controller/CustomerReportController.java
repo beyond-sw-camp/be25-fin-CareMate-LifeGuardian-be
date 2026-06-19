@@ -2,6 +2,7 @@ package com.caremate.lifeguardian.report.controller;
 
 import com.caremate.lifeguardian.common.ApiResponse;
 import com.caremate.lifeguardian.common.security.SecurityUtil;
+import com.caremate.lifeguardian.report.dto.request.ReportBulkSendRequest;
 import com.caremate.lifeguardian.report.dto.response.ReportBulkSendResultDto;
 import com.caremate.lifeguardian.report.dto.response.ReportSendResultDto;
 import com.caremate.lifeguardian.report.service.ReportService;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,13 +50,15 @@ public class CustomerReportController {
     @Operation(summary = "담당 고객 리포트 전체 발송 및 재발송")
     @PostMapping("/send/bulk")
     public ResponseEntity<ApiResponse<ReportBulkSendResultDto>> sendReportsInBulk(
+            @RequestBody(required = false) ReportBulkSendRequest bulkSendRequest,
             HttpServletRequest request
     ) {
         Long currentUserId = SecurityUtil.getCurrentUserId();
         ReportBulkSendResultDto response = reportService.sendReportsInBulk(
                 currentUserId,
                 resolveClientIp(request),
-                request.getHeader("User-Agent")
+                request.getHeader("User-Agent"),
+                bulkSendRequest == null ? null : bulkSendRequest.getReportIds()
         );
 
         return ResponseEntity.ok(

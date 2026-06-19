@@ -12,7 +12,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 리포트 생성 요청과 개별·일괄 발송 흐름을 관리
@@ -23,6 +26,7 @@ public class ReportServiceImpl implements ReportService {
 
     private static final String SEND_PENDING = "01";
     private static final String SEND_SUCCESS = "02";
+    private static final String SEND_FAILED = "03";
 
     private final ReportTransactionService reportTransactionService;
     private final ReportSendMapper reportSendMapper;
@@ -91,19 +95,24 @@ public class ReportServiceImpl implements ReportService {
 
     /**
      * 오늘 연락 대상의 최신 리포트를 건별 트랜잭션으로 발송한다.
+     * reportIds가 있으면 선택한 리포트만 발송하고, 없으면 전체 대상에게 발송한다.
      */
     @Override
     public ReportBulkSendResultDto sendReportsInBulk(
             Long currentUserId,
             String ipAddress,
-            String userAgent // 요청 보낸 브라우저, 기기 정보 담은 HTTP 헤더
+            String userAgent,
+            List<Long> reportIds
     ) {
+        List<Long> selectedReportIds = normalizeReportIds(reportIds);
         List<ReportSendTargetDto> targets =
-                reportSendMapper.selectBulkReportSendTargets(currentUserId);
+                reportSendMapper.selectBulkReportSendTargets(currentUserId, selectedReportIds);
 
         if (targets.isEmpty()) {
             throw new BaseException(404, "발송 가능한 고객 리포트가 없습니다.");
         }
+
+        int requestedCount = selectedReportIds.isEmpty() ? targets.size() : selectedReportIds.size();
         int successCount = 0;
         int failedCount = 0;
         LocalDateTime sentAt = LocalDateTime.now();
@@ -124,9 +133,9 @@ public class ReportServiceImpl implements ReportService {
         }
 
         return ReportBulkSendResultDto.builder()
-                .requestedCount(targets.size())
+                .requestedCount(requestedCount)
                 .successCount(successCount)
-                .skippedCount(0)
+                .skippedCount(Math.max(0, requestedCount - targets.size()))
                 .failedCount(failedCount)
                 .sentAt(sentAt)
                 .build();
@@ -138,7 +147,7 @@ public class ReportServiceImpl implements ReportService {
         }
         if (!SEND_PENDING.equals(target.getSendStatusCode())
                 && !SEND_SUCCESS.equals(target.getSendStatusCode())
-                && !"03".equals(target.getSendStatusCode())) {
+                && !SEND_FAILED.equals(target.getSendStatusCode())) {
             throw new BaseException(409, "발송할 수 없는 리포트 상태입니다.");
         }
     }
@@ -148,5 +157,20 @@ public class ReportServiceImpl implements ReportService {
                 && target.getWebFormId() == null) {
             throw new BaseException(400, "성장 리포트는 웹폼 응답이 필요합니다.");
         }
+    }
+
+    private List<Long> normalizeReportIds(List<Long> reportIds) {
+        if (reportIds == null || reportIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<Long> normalized = new LinkedHashSet<>();
+        for (Long reportId : reportIds) {
+            if (reportId == null || reportId < 1) {
+                throw new BaseException(400, "유효하지 않은 리포트 ID가 포함되어 있습니다.");
+            }
+            normalized.add(reportId);
+        }
+        return new ArrayList<>(normalized);
     }
 }
