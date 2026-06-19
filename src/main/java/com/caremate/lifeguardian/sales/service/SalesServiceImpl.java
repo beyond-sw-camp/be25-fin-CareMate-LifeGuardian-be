@@ -122,11 +122,11 @@ public class SalesServiceImpl implements SalesService {
                 && !Set.of("01", "02").contains(request.getCustomerStageCode())) {
             throw new BaseException(400, "고객 단계는 01 또는 02만 입력할 수 있습니다.");
         }
-        if (!isAllowedCodes(request.getConsultStatusCode(), Set.of("01", "02"))) {
+        if (hasInvalidCodes(request.getConsultStatusCode(), Set.of("01", "02"))) {
             throw new BaseException(400, "상담 상태는 01 또는 02만 입력할 수 있습니다.");
         }
-        if (!isAllowedCodes(request.getContractStatusCode(), Set.of("01", "02", "03", "04", "06"))
-                || !isAllowedCodes(request.getContractStatusCodes(), Set.of("01", "02", "03", "04", "06"))) {
+        if (hasInvalidCodes(request.getContractStatusCode(), Set.of("01", "02", "03", "04", "06"))
+                || hasInvalidCodes(request.getContractStatusCodes(), Set.of("01", "02", "03", "04", "06"))) {
             throw new BaseException(400, "계약 상태는 01, 02, 03, 04, 06만 입력할 수 있습니다.");
         }
         if (request.getAge() != null && request.getAge() < 0) {
@@ -163,7 +163,7 @@ public class SalesServiceImpl implements SalesService {
         return normalized;
     }
 
-    private boolean isAllowedCodes(List<String> codes, Set<String> allowedCodes) {
-        return codes == null || codes.isEmpty() || allowedCodes.containsAll(codes);
+    private boolean hasInvalidCodes(List<String> codes, Set<String> allowedCodes) {
+        return codes != null && !codes.isEmpty() && !allowedCodes.containsAll(codes);
     }
 }
