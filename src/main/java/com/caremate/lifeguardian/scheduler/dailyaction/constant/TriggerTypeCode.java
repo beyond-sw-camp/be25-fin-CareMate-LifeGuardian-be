@@ -20,4 +20,7 @@ public final class TriggerTypeCode {
 	public static final String PARENT_TURN_30 = "13";
 	public static final String PARENT_TURN_50 = "14";
 	public static final String PARENT_TURN_60 = "15";
+
+	public static final String CHILD_BIRTHDAY = "16";
+	public static final String CHILD_SHIFT_DDAY = "17";
 }
