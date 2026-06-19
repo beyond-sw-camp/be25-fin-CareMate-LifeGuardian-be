@@ -22,6 +22,15 @@ public class SalesSearchRequestDto {
     // 성별 검색 조건: Male, Female
     private String gender;
 
+    // 고객 단계 검색 조건: 01(잠재), 02(통합)
+    private String customerStageCode;
+
+    // 상담 상태 코드 다중 선택 조건
+    private List<String> consultStatusCode;
+
+    // 계약 상태 코드 다중 선택 조건
+    private List<String> contractStatusCode;
+
     // 계약 상태 코드 다중 선택 조건
     private List<String> contractStatusCodes;
 

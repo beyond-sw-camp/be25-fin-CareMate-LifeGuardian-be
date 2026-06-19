@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.caremate.lifeguardian.scheduler.dailyaction.mapper.DailyActionBatchMapper">
+
+    <select id="findActionTargets"
+            resultType="com.caremate.lifeguardian.scheduler.dailyaction.dto.ActionTargetDto">
+        SELECT
+        pc.id AS customerId,
+        pc.sales_user_id AS salesUserId,
+        pc.conversion_status_code AS conversionStatusCode,
+        pc.name AS childName,
+        pc.birth_date AS childBirthDate,
+        pc.parent_customer_id AS parentCustomerId,
+        ic.name AS parentName,
+        ic.birth_date AS parentBirthDate
+        FROM potential_customer pc
+        JOIN integrated_customer ic
+        ON ic.integrated_customer_id = pc.parent_customer_id
+        WHERE pc.conversion_status_code = '01'
+        AND pc.sales_user_id IS NOT NULL
+    </select>
+
+    <insert id="insertDailyActionItem">
+        INSERT IGNORE INTO daily_action_item (
+        sales_user_id,
+        customer_id,
+        conversion_status_code,
+        trigger_type_code,
+        priority_score,
+        target_date
+        )
+        VALUES (
+        #{salesUserId},
+        #{customerId},
+        #{conversionStatusCode},
+        #{triggerTypeCode},
+        #{priorityScore},
+        #{targetDate}
+        )
+    </insert>
+
+</mapper>

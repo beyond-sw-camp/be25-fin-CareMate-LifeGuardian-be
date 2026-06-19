@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.caremate.lifeguardian.recommendai.mapper.RecommendAiMapper">
+
+    <select id="findWebformById" resultType="com.caremate.lifeguardian.recommendation.domain.WebformResponse">
+        SELECT
+            id,
+            customer_id AS customerId,
+            conversion_status_code AS conversionStatusCode,
+            height,
+            weight,
+            selected_priority_category AS selectedPriorityCategory,
+            history_json AS historyJson,
+            activity_json AS activityJson,
+            past_surgery_or_hospitalization AS pastSurgeryOrHospitalization,
+            desired_budget_code AS desiredBudgetCode,
+            received_at AS receivedAt
+        FROM webform_response
+        WHERE id = #{id}
+    </select>
+
+    <select id="findLatestWebformByCustomerId" resultType="com.caremate.lifeguardian.recommendation.domain.WebformResponse">
+        SELECT
+            id,
+            customer_id AS customerId,
+            conversion_status_code AS conversionStatusCode,
+            height,
+            weight,
+            selected_priority_category AS selectedPriorityCategory,
+            history_json AS historyJson,
+            activity_json AS activityJson,
+            past_surgery_or_hospitalization AS pastSurgeryOrHospitalization,
+            desired_budget_code AS desiredBudgetCode,
+            received_at AS receivedAt
+        FROM webform_response
+        WHERE customer_id = #{customerId}
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findCustomerInfo" resultType="com.caremate.lifeguardian.recommendation.dto.CustomerInfoDto">
+        SELECT
+            id AS customerId,
+            name,
+            birth_date AS birthDate,
+            gender,
+            sales_user_id AS salesUserId
+        FROM potential_customer
+        WHERE id = #{customerId}
+        UNION ALL
+        SELECT
+            integrated_customer_id AS customerId,
+            name,
+            birth_date AS birthDate,
+            gender,
+            sales_user_id AS salesUserId
+        FROM integrated_customer
+        WHERE integrated_customer_id = #{customerId}
+        LIMIT 1
+    </select>
+
+    <select id="findCoverageByName" resultType="com.caremate.lifeguardian.recommendation.dto.CoverageCandidateDto">
+        SELECT
+            id AS coverageId,
+            category_code AS categoryCode,
+            coverage_name AS coverageName,
+            unit_premium AS unitPremium,
+            danger_priority_order AS dangerPriorityOrder
+        FROM insurance_coverage
+        WHERE coverage_name = #{coverageName}
+        LIMIT 1
+    </select>
+
+    <insert id="insertInsurancePlan" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO insurance_plan (
+            webform_response_id,
+            plan_name,
+            total_premium,
+            script_data,
+            recommendation_type_code,
+            created_at
+        ) VALUES (
+            #{webformResponseId},
+            #{planName},
+            #{totalPremium},
+            #{scriptData},
+            #{recommendationTypeCode},
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <insert id="insertPlanCoverage">
+        INSERT INTO insurance_plan_coverage (
+            plan_id,
+            coverage_id,
+            selected_order,
+            applied_premium
+        ) VALUES (
+            #{planId},
+            #{coverageId},
+            #{selectedOrder},
+            #{appliedPremium}
+        )
+    </insert>
+
+    <insert id="insertRecommendationLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO recommendation_log (
+            potential_customer_id,
+            target_insured_type,
+            webform_response_id,
+            sales_user_id,
+            recommended_category_code,
+            total_score,
+            recommend_reason,
+            script_data
+        ) VALUES (
+            #{potentialCustomerId},
+            #{targetInsuredType},
+            #{webformResponseId},
+            #{salesUserId},
+            #{recommendedCategoryCode},
+            #{totalScore},
+            #{recommendReason},
+            #{scriptData}
+        )
+    </insert>
+
+</mapper>
