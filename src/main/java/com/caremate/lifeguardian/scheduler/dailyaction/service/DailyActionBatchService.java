@@ -55,6 +55,18 @@ public class DailyActionBatchService {
 		LocalDate childShiftDate =
 				calculateThisYearShiftDate(target.getChildBirthDate(), today);
 
+		LocalDate childBirthday =
+				target.getChildBirthDate().withYear(today.getYear());
+
+		if (today.equals(childBirthday)) {
+			insertAction(target, TriggerTypeCode.CHILD_BIRTHDAY, 50, today);
+		}
+
+		if (today.equals(childShiftDate)) {
+			insertAction(target, TriggerTypeCode.CHILD_SHIFT_DDAY, 110, today);
+			childCondition = true;
+		}
+
 		if (today.equals(childShiftDate.minusDays(30))) {
 			insertAction(target, TriggerTypeCode.CHILD_SHIFT_D30, 85, today);
 			childCondition = true;
