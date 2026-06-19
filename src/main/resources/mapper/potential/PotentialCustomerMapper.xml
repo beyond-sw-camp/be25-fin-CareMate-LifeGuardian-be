@@ -24,6 +24,7 @@
             cc.code_name AS guardianRelationshipName,  -- 가족관계 코드명 조회(부/모)
             TIMESTAMPDIFF(YEAR, ic.birth_date, CURDATE()) AS guardianAge,  -- 부모 생년월일 기준 만 나이 계산
             ic.phone AS guardianPhone,  -- 부모 연락처
+            pc.is_active AS isActive,   -- 졸업 여부
             pc.created_at AS createdAt  -- 생성일시
         FROM potential_customer pc
         -- 부모(통합고객) 테이블 조인
@@ -36,7 +37,9 @@
         -- 로그인한 영업사원의 잠재고객만 조회
         WHERE pc.sales_user_id = #{salesUserId}
         -- 최신 등록순 정렬
-        ORDER BY pc.created_at DESC
+        ORDER BY
+            pc.is_active ASC,     -- 졸업 고객 맨 아래
+            pc.created_at DESC    -- 최신 등록순
 
     </select>
 
