@@ -36,6 +36,52 @@ public interface WebformMapper {
     );
 
     /**
+     * 잠재고객 존재 여부 확인
+     *
+     * 조건:
+     * - 로그인한 영업사원이 담당하는 잠재고객
+     *
+     * @param salesUserId 로그인한 영업사원 ID
+     * @param customerId 잠재고객 ID
+     * @return 존재 여부
+     */
+    boolean existsPotentialCustomerByIdAndSalesUserId(
+            @Param("salesUserId") Long salesUserId,
+            @Param("customerId") Long customerId
+    );
+
+    /**
+     * 통합고객 존재 여부 확인
+     *
+     * 조건:
+     * - 로그인한 영업사원이 담당하는 통합고객
+     *
+     * @param salesUserId 로그인한 영업사원 ID
+     * @param customerId 통합고객 ID
+     * @return 존재 여부
+     */
+    boolean existsIntegratedCustomerByIdAndSalesUserId(
+            @Param("salesUserId") Long salesUserId,
+            @Param("customerId") Long customerId
+    );
+
+    /**
+     * 대시보드 웹폼 발송 대상 여부 확인
+     *
+     * 조건:
+     * - 잠재고객
+     * - 졸업 전 고객
+     * - 오늘 생일인 고객
+     * @param salesUserId 로그인한 영업사원 ID
+     * @param customerId 잠재고객 ID
+     * @return 발송 대상 여부
+     */
+    boolean existsDashboardWebformTarget(
+            @Param("salesUserId") Long salesUserId,
+            @Param("customerId") Long customerId
+    );
+
+    /**
      * 웹폼 발송 이력을 저장한다.
      *
      * @param salesUserId 담당 영업사원 ID

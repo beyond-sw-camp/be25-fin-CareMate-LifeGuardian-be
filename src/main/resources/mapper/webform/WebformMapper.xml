@@ -29,6 +29,66 @@
                     AND DATE(wi.issued_at) = CURDATE()
             )
     </select>
+    
+    <!-- 잠재고객 존재 여부 확인 -->
+    <select id="existsPotentialCustomerByIdAndSalesUserId"
+            resultType="boolean">
+        
+        SELECT EXISTS (
+            
+            SELECT 1
+            FROM potential_customer pc
+            WHERE pc.id = #{customerId}
+                AND pc.sales_user_id = #{salesUserId}
+                AND pc.conversion_status_code = '01'
+        )
+    </select>
+    
+    <!-- 통합고객 존재 여부 확인 -->
+    <select id="existsIntegratedCustomerByIdAndSalesUserId"
+            resultType="boolean">
+
+        SELECT EXISTS (
+
+            SELECT 1
+            FROM integrated_customer ic
+            WHERE ic.integrated_customer_id = #{customerId}
+                AND ic.sales_user_id = #{salesUserId}
+        )
+    </select>
+
+    <!-- 대시보드 웹폼 발송 대상 여부 확인 -->
+    <select id="existsDashboardWebformTarget"
+            resultType="boolean">
+
+        SELECT EXISTS (
+
+            SELECT 1
+            FROM potential_customer pc
+            WHERE pc.id = #{customerId}
+                AND pc.sales_user_id = #{salesUserId}
+                AND pc.conversion_status_code = '01'
+                AND pc.is_active = 0
+                AND DATE_FORMAT(pc.birth_date, '%m-%d')
+                    = DATE_FORMAT(CURDATE(), '%m-%d')
+        )
+    </select>
+
+    <!-- 대시보드 재발송 여부 확인 -->
+    <select id="existsTodaySentWebform"
+            resultType="boolean">
+
+        SELECT EXISTS (
+
+            SELECT 1
+            FROM webform_issuance
+            WHERE sales_user_id = #{salesUserId}
+              AND customer_id = #{customerId}
+              AND conversion_status_code = #{conversionStatusCode}
+              AND webform_status_code = '02'
+              AND DATE(issued_at) = CURDATE()
+        )
+    </select>
 
     <!-- 웹폼 발송 이력 저장 -->
     <insert id="insertWebformIssuance">
@@ -68,6 +128,7 @@
         SET webform_status_code = '04',
             collected_at = NOW()
         WHERE uuid_token = #{uuidToken}
+            AND webform_status_code != '04'
     </update>
 
     <!-- 잠재고객 상담 상태 변경 -->
@@ -78,22 +139,6 @@
             webform_received_at = CURDATE()
         WHERE id = #{customerId}
     </update>
-
-    <!-- 대시보드 재발송 여부 확인 -->
-    <select id="existsTodaySentWebform"
-            resultType="boolean">
-
-        SELECT EXISTS (
-
-            SELECT 1
-            FROM webform_issuance
-            WHERE sales_user_id = #{salesUserId}
-              AND customer_id = #{customerId}
-              AND conversion_status_code = #{conversionStatusCode}
-              AND webform_status_code = '02'
-              AND DATE(issued_at) = CURDATE()
-        )
-    </select>
 
     <!-- 영업현황 웹폼 일괄 발송 대상 조회 -->
     <select id="findSalesStatusWebformTargets"

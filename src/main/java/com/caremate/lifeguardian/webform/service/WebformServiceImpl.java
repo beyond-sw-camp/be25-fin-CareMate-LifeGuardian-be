@@ -32,7 +32,20 @@ public class WebformServiceImpl implements WebformService {
 
         Long salesUserId = SecurityUtil.getCurrentUserId();
 
-        if ("dashboard" .equals(sendSource)) {
+        // 고객 존재 여부 검증
+        validateCustomerExists(
+                salesUserId,
+                conversionStatusCode,
+                customerId
+        );
+
+        if ("dashboard".equals(sendSource)) {
+
+            validateDashboardSendTarget(
+                    salesUserId,
+                    conversionStatusCode,
+                    customerId
+            );
 
             boolean alreadySent =
                     webformMapper.existsTodaySentWebform(
@@ -87,6 +100,13 @@ public class WebformServiceImpl implements WebformService {
 
         List<Long> todayTargetCustomerIds =
                 webformMapper.findTodayWebformSendTargetCustomerIds(salesUserId);
+
+        // 발송 대상 없음 검증
+        if (todayTargetCustomerIds.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "오늘 웹폼 발송 대상 고객이 없습니다."
+            );
+        }
 
         return todayTargetCustomerIds.stream()
                 .map(customerId -> sendWebform("dashboard", "01", customerId))
@@ -148,6 +168,70 @@ public class WebformServiceImpl implements WebformService {
                 throw new IllegalStateException("잠재고객 상담 상태 변경에 실패했습니다.");
 
             }
+        }
+    }
+
+    /**
+     * 고객 존재 여부 검증
+     */
+    private void validateCustomerExists(
+            Long salesUserId,
+            String conversionStatusCode,
+            Long customerId
+    ) {
+
+        boolean exists;
+
+        if ("01".equals(conversionStatusCode)) {
+
+            exists = webformMapper.existsPotentialCustomerByIdAndSalesUserId(
+                    salesUserId,
+                    customerId
+            );
+        } else if ("02".equals(conversionStatusCode)) {
+
+            exists = webformMapper.existsIntegratedCustomerByIdAndSalesUserId(
+                    salesUserId,
+                    customerId
+            );
+        } else {
+            throw new IllegalArgumentException(
+                    "유효하지 않은 고객 구분 코드입니다."
+            );
+        }
+
+        if (!exists) {
+            throw new IllegalArgumentException(
+                    "존재하지 않거나 담당자가 아닌 고객입니다."
+            );
+        }
+    }
+
+    /**
+     * 대시보드 웹폼 발송 대상 검증
+     */
+    private void validateDashboardSendTarget(
+            Long salesUserId,
+            String conversionStatusCode,
+            Long customerId
+    ) {
+
+        if (!"01".equals(conversionStatusCode)) {
+            throw new IllegalArgumentException(
+                    "대시보드에서는 잠재고객만 발송할 수 있습니다."
+            );
+        }
+
+        boolean isTarget =
+                webformMapper.existsDashboardWebformTarget(
+                        salesUserId,
+                        customerId
+                );
+
+        if (!isTarget) {
+            throw new IllegalArgumentException(
+                    "오늘 연락 고객 대상이 아닙니다."
+            );
         }
     }
 }
