@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.caremate.lifeguardian.webform.mapper.WebformMapper">
+
+    <!-- 웹폼 일괄 발송 대상 고객 조회 -->
+    <select id="findTodayWebformSendTargetCustomerIds"
+            resultType="java.lang.Long">
+
+        SELECT pc.id
+        FROM potential_customer pc
+        WHERE pc.sales_user_id = #{salesUserId}
+            AND pc.conversion_status_code = '01'
+            AND pc.is_active = 0
+
+            /* 오늘 생일인 고객 */
+            AND DATE_FORMAT(pc.birth_date, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+
+            /* 오늘 이미 웹폼 발송완료된 고객 제외 */
+            AND NOT EXISTS (
+                SELECT 1
+                FROM webform_issuance wi
+                WHERE wi.customer_id = pc.id
+                    AND wi.conversion_status_code = '01'
+                    AND wi.sales_user_id = #{salesUserId}
+                    AND wi.webform_status_code = '02'
+                    AND DATE(wi.issued_at) = CURDATE()
+            )
+    </select>
+    
+    <!-- 잠재고객 존재 여부 확인 -->
+    <select id="existsPotentialCustomerByIdAndSalesUserId"
+            resultType="boolean">
+        
+        SELECT EXISTS (
+            
+            SELECT 1
+            FROM potential_customer pc
+            WHERE pc.id = #{customerId}
+                AND pc.sales_user_id = #{salesUserId}
+                AND pc.conversion_status_code = '01'
+        )
+    </select>
+    
+    <!-- 통합고객 존재 여부 확인 -->
+    <select id="existsIntegratedCustomerByIdAndSalesUserId"
+            resultType="boolean">
+
+        SELECT EXISTS (
+
+            SELECT 1
+            FROM integrated_customer ic
+            WHERE ic.integrated_customer_id = #{customerId}
+                AND ic.sales_user_id = #{salesUserId}
+        )
+    </select>
+
+    <!-- 대시보드 웹폼 발송 대상 여부 확인 -->
+    <select id="existsDashboardWebformTarget"
+            resultType="boolean">
+
+        SELECT EXISTS (
+
+            SELECT 1
+            FROM potential_customer pc
+            WHERE pc.id = #{customerId}
+                AND pc.sales_user_id = #{salesUserId}
+                AND pc.conversion_status_code = '01'
+                AND pc.is_active = 0
+                AND DATE_FORMAT(pc.birth_date, '%m-%d')
+                    = DATE_FORMAT(CURDATE(), '%m-%d')
+        )
+    </select>
+
+    <!-- 대시보드 재발송 여부 확인 -->
+    <select id="existsTodaySentWebform"
+            resultType="boolean">
+
+        SELECT EXISTS (
+
+            SELECT 1
+            FROM webform_issuance
+            WHERE sales_user_id = #{salesUserId}
+              AND customer_id = #{customerId}
+              AND conversion_status_code = #{conversionStatusCode}
+              AND webform_status_code = '02'
+              AND DATE(issued_at) = CURDATE()
+        )
+    </select>
+
+    <!-- 웹폼 발송 이력 저장 -->
+    <insert id="insertWebformIssuance">
+
+        INSERT INTO webform_issuance (
+             sales_user_id,
+             customer_id,
+             conversion_status_code,
+             uuid_token,
+             webform_status_code
+        )
+        VALUES (
+            #{salesUserId},
+            #{customerId},
+            #{conversionStatusCode},
+            #{uuidToken},
+            '02'
+        )
+    </insert>
+
+    <!-- UUID 토큰으로 웹폼 발송 대상 조회 -->
+    <select id="findIssuanceTargetByUuidToken"
+            resultType="com.caremate.lifeguardian.webform.dto.response.WebformIssuanceTargetResponse">
+
+        SELECT
+            sales_user_id AS salesUserId,
+            customer_id AS customerId,
+            conversion_status_code AS conversionStatusCode
+        FROM webform_issuance
+        WHERE uuid_token = #{uuidToken}
+    </select>
+
+    <!-- 웹폼 회수 처리 -->
+    <update id="updateWebformCollected">
+
+        UPDATE webform_issuance
+        SET webform_status_code = '04',
+            collected_at = NOW()
+        WHERE uuid_token = #{uuidToken}
+            AND webform_status_code != '04'
+    </update>
+
+    <!-- 잠재고객 상담 상태 변경 -->
+    <update id="updatePotentialCustomerConsultStatus">
+
+        UPDATE potential_customer
+        SET consult_status_code = '02',
+            webform_received_at = CURDATE()
+        WHERE id = #{customerId}
+    </update>
+
+    <!-- 영업현황 웹폼 일괄 발송 대상 조회 -->
+    <select id="findSalesStatusWebformTargets"
+            resultType="com.caremate.lifeguardian.webform.dto.response.SalesStatusWebformTargetResponse">
+
+        SELECT
+            pc.id AS customerId,
+            '01' AS conversionStatusCode
+        FROM potential_customer pc
+        WHERE pc.sales_user_id = #{salesUserId}
+            AND pc.is_active = 0
+
+        UNION ALL
+
+        SELECT
+            ic.integrated_customer_id AS customerId,
+            '02' AS conversionStatusCode
+        FROM integrated_customer ic
+        WHERE ic.sales_user_id = #{salesUserId}
+    </select>
+</mapper>

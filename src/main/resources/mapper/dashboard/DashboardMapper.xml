@@ -158,6 +158,7 @@
 
             CASE
                 WHEN DATE_FORMAT(pc.birth_date, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+                    AND COALESCE(wr.webform_status_code, '01') = '01'
                 THEN TRUE
                 ELSE FALSE
             END AS webFormSendEnabled,
