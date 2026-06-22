@@ -29,6 +29,7 @@ public interface ReportService {
     ReportBulkSendResultDto sendReportsInBulk(
             Long currentUserId,
             String ipAddress,
-            String userAgent
+            String userAgent,
+            List<Long> reportIds
     );
 }

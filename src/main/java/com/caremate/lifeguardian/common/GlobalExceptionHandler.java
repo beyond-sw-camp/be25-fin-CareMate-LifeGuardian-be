@@ -49,6 +49,27 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(400, "입력 데이터가 유효하지 않습니다.", errors));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(
+            IllegalArgumentException e
+    ) {
+        log.warn("잘못된 요청 예외 발생: {}", e.getMessage());
+
+        return ResponseEntity
+                .status(400)
+                .body(ApiResponse.error(400, e.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(
+            IllegalStateException e
+    ) {
+        log.warn("처리 불가능한 상태 예외 발생: {}", e.getMessage());
+
+        return ResponseEntity
+                .status(409)
+                .body(ApiResponse.error(409, e.getMessage()));
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {

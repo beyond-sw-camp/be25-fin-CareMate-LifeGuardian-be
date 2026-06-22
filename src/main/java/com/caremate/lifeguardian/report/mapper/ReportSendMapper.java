@@ -20,7 +20,8 @@ public interface ReportSendMapper {
 
     // 일괄 발송 대상 조회
     List<ReportSendTargetDto> selectBulkReportSendTargets(
-            @Param("currentUserId") Long currentUserId
+            @Param("currentUserId") Long currentUserId,
+            @Param("reportIds") List<Long> reportIds
     );
 
     // 리포트 발송 상태, 일시 갱신

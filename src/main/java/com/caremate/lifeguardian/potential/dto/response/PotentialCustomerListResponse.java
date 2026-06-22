@@ -22,5 +22,7 @@ public class PotentialCustomerListResponse {
     private Integer guardianAge;  // 부모 만 나이
     private String guardianPhone;
 
+    private Boolean isActive;  // 잠재고객 졸업 여부 / false=졸업 전, true=졸업
+
     private LocalDateTime createdAt;
 }

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.caremate.lifeguardian.script.mapper.CustomerScriptMapper">
+
+    <!-- 오늘 고객의 액션 아이템 조회 -->
+    <select id="findTodayActionItemIdByCustomerId" resultType="long">
+        SELECT id
+        FROM daily_action_item
+        WHERE customer_id = #{customerId}
+        AND conversion_status_code = '01'
+        AND target_date = CURDATE()
+        AND is_completed = 0
+        ORDER BY priority_score DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 오늘 액션에 이미 생성된 스크립트가 있는지 조회 -->
+    <select id="findScriptByActionItemId"
+            resultType="com.caremate.lifeguardian.script.dto.response.CustomerScriptResponse">
+        SELECT
+        cs.id AS scriptId,
+        cs.action_item_id AS actionItemId,
+        cs.customer_id AS customerId,
+        cs.conversion_status_code AS conversionStatusCode,
+        dai.trigger_type_code AS triggerTypeCode,
+        cc.code_name AS triggerName,
+        cs.script_content AS scriptContent,
+        cs.created_at AS createdAt
+        FROM customer_script cs
+        LEFT JOIN daily_action_item dai
+        ON dai.id = cs.action_item_id
+        LEFT JOIN common_code cc
+        ON cc.group_code = 'TRIGGER_TYPE'
+        AND cc.code_value = dai.trigger_type_code
+        WHERE cs.action_item_id = #{actionItemId}
+        ORDER BY cs.created_at DESC
+        LIMIT 1
+    </select>
+
+    <!-- AI 프롬프트 생성을 위한 고객/부모/트리거 정보 조회 -->
+    <select id="findScriptContext"
+            resultType="com.caremate.lifeguardian.script.dto.ScriptContextDto">
+        SELECT
+        dai.id AS actionItemId,
+        dai.customer_id AS customerId,
+        dai.conversion_status_code AS conversionStatusCode,
+        dai.trigger_type_code AS triggerTypeCode,
+        cc.code_name AS triggerName,
+        pc.name AS childName,
+        pc.birth_date AS childBirthDate,
+        pc.gender AS childGender,
+        ic.name AS parentName,
+        ic.birth_date AS parentBirthDate,
+        ic.gender AS parentGender
+        FROM daily_action_item dai
+        JOIN potential_customer pc
+        ON pc.id = dai.customer_id
+        AND dai.conversion_status_code = '01'
+        JOIN integrated_customer ic
+        ON ic.integrated_customer_id = pc.parent_customer_id
+        JOIN common_code cc
+        ON cc.group_code = 'TRIGGER_TYPE'
+        AND cc.code_value = dai.trigger_type_code
+        WHERE dai.id = #{actionItemId}
+    </select>
+
+    <!-- 생성된 스크립트 저장 -->
+    <insert id="insertCustomerScript">
+        INSERT INTO customer_script (
+        customer_id,
+        conversion_status_code,
+        action_item_id,
+        script_content
+        )
+        VALUES (
+        #{customerId},
+        #{conversionStatusCode},
+        #{actionItemId},
+        #{scriptContent}
+        )
+    </insert>
+
+    <!-- 로그인 영업사원의 고객 권한 확인 -->
+    <select id="existsCustomerBySalesUserId" resultType="boolean">
+        SELECT EXISTS (
+        SELECT 1
+        FROM potential_customer
+        WHERE id = #{customerId}
+        AND sales_user_id = #{salesUserId}
+        )
+    </select>
+</mapper>

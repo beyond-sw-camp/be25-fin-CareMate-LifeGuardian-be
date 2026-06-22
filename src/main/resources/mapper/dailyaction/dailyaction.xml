@@ -22,6 +22,7 @@
         ON ic.integrated_customer_id = pc.parent_customer_id
         WHERE pc.conversion_status_code = '01'
         AND pc.sales_user_id IS NOT NULL
+        AND pc.is_active = FALSE
     </select>
 
     <insert id="insertDailyActionItem">

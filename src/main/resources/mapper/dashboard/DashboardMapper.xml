@@ -25,6 +25,7 @@
                 FROM potential_customer pc
                 WHERE pc.sales_user_id = #{salesUserId}
                     AND pc.consult_status_code = '01'
+                    AND pc.is_active = FALSE               /* 졸업 고객 제외 */
             ) AS uncontactedCustomerCount,
 
             /* 잠재고객 상담중 고객 수 */
@@ -33,6 +34,7 @@
                 FROM potential_customer pc
                 WHERE pc.sales_user_id = #{salesUserId}
                     AND pc.consult_status_code = '02'
+                    AND pc.is_active = FALSE              /* 졸업 고객 제외 */
             ) AS consultingCustomerCount,
 
             /* 설계중 고객 수 */
@@ -156,6 +158,7 @@
 
             CASE
                 WHEN DATE_FORMAT(pc.birth_date, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+                    AND COALESCE(wr.webform_status_code, '01') = '01'
                 THEN TRUE
                 ELSE FALSE
             END AS webFormSendEnabled,
@@ -167,12 +170,17 @@
 
             CASE
                 WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 0
+                    AND COALESCE(cr.send_status_code, '01') != '02'
                 THEN TRUE
                 ELSE FALSE
             END AS reportSendEnabled,
 
             cr.send_status_code AS reportSendStatusCode,
-            send_code.code_name AS reportSendStatusName,
+
+            CASE
+                WHEN cr.send_status_code = '02' THEN '발송완료'
+                ELSE send_code.code_name
+                END AS reportSendStatusName,
 
             base.priorityScore AS priorityScore
 
@@ -202,29 +210,32 @@
                 COALESCE(
                     pc_inner.insurance_age_shift_date,
                     CASE
-                        WHEN DATE_ADD(
-                            STR_TO_DATE(
-                                CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(pc_inner.birth_date, '%m-%d')),
-                                '%Y-%m-%d'
+                        WHEN STR_TO_DATE(
+                            CONCAT(
+                                YEAR(CURDATE()),
+                                '-',
+                                DATE_FORMAT(DATE_ADD(pc_inner.birth_date, INTERVAL 6 MONTH), '%m-%d')
                             ),
-                            INTERVAL 6 MONTH
-                        ) &lt; CURDATE()
+                            '%Y-%m-%d'
+                        ) <![CDATA[<]]> CURDATE()
                         THEN DATE_ADD(
-                            DATE_ADD(
-                                STR_TO_DATE(
-                                    CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(pc_inner.birth_date, '%m-%d')),
-                                    '%Y-%m-%d'
+                            STR_TO_DATE(
+                                CONCAT(
+                                    YEAR(CURDATE()),
+                                    '-',
+                                    DATE_FORMAT(DATE_ADD(pc_inner.birth_date, INTERVAL 6 MONTH), '%m-%d')
                                 ),
-                                INTERVAL 6 MONTH
+                                '%Y-%m-%d'
                             ),
                             INTERVAL 1 YEAR
                         )
-                        ELSE DATE_ADD(
-                            STR_TO_DATE(
-                                CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(pc_inner.birth_date, '%m-%d')),
-                                '%Y-%m-%d'
+                        ELSE STR_TO_DATE(
+                            CONCAT(
+                                YEAR(CURDATE()),
+                                '-',
+                                DATE_FORMAT(DATE_ADD(pc_inner.birth_date, INTERVAL 6 MONTH), '%m-%d')
                             ),
-                            INTERVAL 6 MONTH
+                            '%Y-%m-%d'
                         )
                     END
                 ) AS nextInsuranceAgeShiftDate
@@ -238,6 +249,7 @@
                 AND dai.target_date = CURDATE()
                 AND dai.is_completed = FALSE
                 AND dai.conversion_status_code = '01'
+                AND pc_inner.is_active = FALSE           /* 오늘 연락 고객에서 졸업 고객 제외*/
 
             GROUP BY
                 dai.sales_user_id,
@@ -253,6 +265,7 @@
 
         INNER JOIN potential_customer pc
             ON base.customer_id = pc.id
+            AND pc.is_active = FALSE         /* 최종 조회에서도 한 번 더 졸업 고객 제외 */
 
         LEFT JOIN common_code consult_code
             ON consult_code.group_code = 'CONSULT_STATUS'
@@ -260,20 +273,20 @@
 
         LEFT JOIN (
             SELECT
-                wr1.customer_id,
-                wr1.conversion_status_code,
-                wr1.webform_status_code
-            FROM webform_response wr1
+                wi1.customer_id,
+                wi1.conversion_status_code,
+                wi1.webform_status_code
+            FROM webform_issuance wi1
             INNER JOIN (
                 SELECT
                     customer_id,
                     conversion_status_code,
-                    MAX(id) AS latest_webform_id
-                FROM webform_response
+                    MAX(id) AS latest_issuance_id
+                FROM webform_issuance
                 WHERE conversion_status_code = '01'
                 GROUP BY customer_id, conversion_status_code
-            ) latest_wr
-                ON wr1.id = latest_wr.latest_webform_id
+            ) latest_wi
+                ON wi1.id = latest_wi.latest_issuance_id
         ) wr
             ON wr.customer_id = pc.id
             AND wr.conversion_status_code = '01'
@@ -282,10 +295,26 @@
             ON webform_code.group_code = 'WEBFORM_STATUS'
             AND webform_code.code_value = COALESCE(wr.webform_status_code, '01')
 
-        LEFT JOIN customer_report cr
+        LEFT JOIN (
+            SELECT
+                cr1.id,
+                cr1.customer_id,
+                cr1.conversion_status_code,
+                cr1.send_status_code
+            FROM customer_report cr1
+            INNER JOIN (
+                SELECT
+                    customer_id,
+                    conversion_status_code,
+                    MAX(id) AS latest_report_id
+                FROM customer_report
+                WHERE conversion_status_code = '01'
+                GROUP BY customer_id, conversion_status_code
+            ) latest_cr
+                ON cr1.id = latest_cr.latest_report_id
+        ) cr
             ON cr.customer_id = pc.id
             AND cr.conversion_status_code = '01'
-            AND cr.action_item_id = base.actionItemId
 
         LEFT JOIN common_code send_code
             ON send_code.group_code = 'SEND_STATUS'
