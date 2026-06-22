@@ -170,12 +170,17 @@
 
             CASE
                 WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 0
+                    AND COALESCE(cr.send_status_code, '01') != '02'
                 THEN TRUE
                 ELSE FALSE
             END AS reportSendEnabled,
 
             cr.send_status_code AS reportSendStatusCode,
-            send_code.code_name AS reportSendStatusName,
+
+            CASE
+                WHEN cr.send_status_code = '02' THEN '발송완료'
+                ELSE send_code.code_name
+                END AS reportSendStatusName,
 
             base.priorityScore AS priorityScore
 
@@ -290,10 +295,26 @@
             ON webform_code.group_code = 'WEBFORM_STATUS'
             AND webform_code.code_value = COALESCE(wr.webform_status_code, '01')
 
-        LEFT JOIN customer_report cr
+        LEFT JOIN (
+            SELECT
+                cr1.id,
+                cr1.customer_id,
+                cr1.conversion_status_code,
+                cr1.send_status_code
+            FROM customer_report cr1
+            INNER JOIN (
+                SELECT
+                    customer_id,
+                    conversion_status_code,
+                    MAX(id) AS latest_report_id
+                FROM customer_report
+                WHERE conversion_status_code = '01'
+                GROUP BY customer_id, conversion_status_code
+            ) latest_cr
+                ON cr1.id = latest_cr.latest_report_id
+        ) cr
             ON cr.customer_id = pc.id
             AND cr.conversion_status_code = '01'
-            AND cr.action_item_id = base.actionItemId
 
         LEFT JOIN common_code send_code
             ON send_code.group_code = 'SEND_STATUS'
