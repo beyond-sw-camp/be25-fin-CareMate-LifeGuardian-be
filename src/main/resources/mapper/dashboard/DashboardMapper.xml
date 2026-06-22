@@ -205,29 +205,32 @@
                 COALESCE(
                     pc_inner.insurance_age_shift_date,
                     CASE
-                        WHEN DATE_ADD(
-                            STR_TO_DATE(
-                                CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(pc_inner.birth_date, '%m-%d')),
-                                '%Y-%m-%d'
+                        WHEN STR_TO_DATE(
+                            CONCAT(
+                                YEAR(CURDATE()),
+                                '-',
+                                DATE_FORMAT(DATE_ADD(pc_inner.birth_date, INTERVAL 6 MONTH), '%m-%d')
                             ),
-                            INTERVAL 6 MONTH
+                            '%Y-%m-%d'
                         ) <![CDATA[<]]> CURDATE()
                         THEN DATE_ADD(
-                            DATE_ADD(
-                                STR_TO_DATE(
-                                    CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(pc_inner.birth_date, '%m-%d')),
-                                    '%Y-%m-%d'
+                            STR_TO_DATE(
+                                CONCAT(
+                                    YEAR(CURDATE()),
+                                    '-',
+                                    DATE_FORMAT(DATE_ADD(pc_inner.birth_date, INTERVAL 6 MONTH), '%m-%d')
                                 ),
-                                INTERVAL 6 MONTH
+                                '%Y-%m-%d'
                             ),
                             INTERVAL 1 YEAR
                         )
-                        ELSE DATE_ADD(
-                            STR_TO_DATE(
-                                CONCAT(YEAR(CURDATE()), '-', DATE_FORMAT(pc_inner.birth_date, '%m-%d')),
-                                '%Y-%m-%d'
+                        ELSE STR_TO_DATE(
+                            CONCAT(
+                                YEAR(CURDATE()),
+                                '-',
+                                DATE_FORMAT(DATE_ADD(pc_inner.birth_date, INTERVAL 6 MONTH), '%m-%d')
                             ),
-                            INTERVAL 6 MONTH
+                            '%Y-%m-%d'
                         )
                     END
                 ) AS nextInsuranceAgeShiftDate

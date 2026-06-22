@@ -177,8 +177,8 @@ public class DailyActionBatchService {
 			LocalDate today
 	) {
 		LocalDate shiftDate = birthDate
-				.withYear(today.getYear())
-				.plusMonths(6);
+				.plusMonths(6)
+				.withYear(today.getYear());
 
 		if (shiftDate.isBefore(today)) {
 			shiftDate = shiftDate.plusYears(1);
