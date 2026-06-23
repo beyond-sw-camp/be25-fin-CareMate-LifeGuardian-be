@@ -256,6 +256,25 @@
         WHERE x.rn = 1
         ),
 
+        latest_webform_issuance AS (
+        SELECT *
+        FROM (
+        SELECT
+        wi.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY wi.conversion_status_code, wi.customer_id
+        ORDER BY
+        wi.issued_at DESC,
+        wi.id DESC
+        ) AS rn
+        FROM webform_issuance wi
+        INNER JOIN customer_base cb
+        ON cb.customer_type_code = wi.conversion_status_code
+        AND cb.customer_id = wi.customer_id
+        ) x
+        WHERE x.rn = 1
+        ),
+
         latest_report AS (
         SELECT *
         FROM (
@@ -309,6 +328,7 @@
 
             lw.id AS webform_id,
             lw.received_at AS webform_received_at,
+            lwi.webform_status_code,
 
             lr.id AS report_id,
             lr.report_url,
@@ -324,6 +344,8 @@
                 AND rc.integrated_customer_id = cb.customer_id
             LEFT JOIN latest_webform lw
                 ON lw.conversion_status_code = cb.customer_type_code AND lw.customer_id = cb.customer_id
+            LEFT JOIN latest_webform_issuance lwi
+                ON lwi.conversion_status_code = cb.customer_type_code AND lwi.customer_id = cb.customer_id
             LEFT JOIN latest_report lr
                 ON lr.conversion_status_code = cb.customer_type_code AND lr.customer_id = cb.customer_id
             LEFT JOIN representative_three_step rts
@@ -462,6 +484,9 @@
 
         cp.webform_id AS webFormId,
 
+        COALESCE(cp.webform_status_code, '01') AS webFormStatusCode,
+        COALESCE(webform_code.code_name, '미발송') AS webFormStatusName,
+
         CASE
             WHEN cp.webform_id IS NULL THEN '-'
             ELSE DATE_FORMAT(cp.webform_received_at, '%Y/%m/%d')
@@ -511,6 +536,9 @@
 
         LEFT JOIN common_code contract_code
             ON contract_code.group_code = 'CONTRACT_STATUS' AND contract_code.code_value = cp.contract_status_code
+
+        LEFT JOIN common_code webform_code
+            ON webform_code.group_code = 'WEBFORM_STATUS' AND webform_code.code_value = COALESCE(cp.webform_status_code, '01')
 
         LEFT JOIN common_code send_code
             ON send_code.group_code = 'SEND_STATUS' AND send_code.code_value = cp.send_status_code

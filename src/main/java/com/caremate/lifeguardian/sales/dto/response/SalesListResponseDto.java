@@ -53,6 +53,10 @@ public class SalesListResponseDto {
 
     private Long webFormId;
 
+    private String webFormStatusCode;
+
+    private String webFormStatusName;
+
     // 웹폼 회수일
     private String webformReceivedAt;
 
