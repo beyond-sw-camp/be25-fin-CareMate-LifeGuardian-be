@@ -7,8 +7,6 @@ import com.caremate.lifeguardian.recommendation.dto.CategoryScoreDto;
 import com.caremate.lifeguardian.recommendation.dto.CoverageCandidateDto;
 import com.caremate.lifeguardian.recommendation.dto.CustomerInfoDto;
 import com.caremate.lifeguardian.recommendation.dto.DiseaseRankDto;
-import com.caremate.lifeguardian.recommendation.dto.response.CoverageResponse;
-import com.caremate.lifeguardian.recommendation.dto.response.RecommendationResponse;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -21,6 +19,14 @@ public interface RecommendationMapper {
 			@Param("customerId") Long customerId,
 			@Param("salesUserId") Long salesUserId
 	);
+
+	boolean existsPotentialCustomer(Long customerId);
+
+	boolean existsIntegratedCustomer(Long customerId);
+
+	int countPotentialCustomerBySalesUser(Long customerId, Long salesUserId);
+
+	int countIntegratedCustomerBySalesUser(Long customerId, Long salesUserId);
 
 	WebformResponse findLatestWebform(
 			@Param("customerId") Long customerId
@@ -60,13 +66,5 @@ public interface RecommendationMapper {
 
 	void insertRecommendationLog(
 			RecommendationLog recommendationLog
-	);
-
-	RecommendationResponse findLatestRecommendation(
-			@Param("customerId") Long customerId
-	);
-
-	List<CoverageResponse> findCoveragesByPlanId(
-			@Param("planId") Long planId
 	);
 }
