@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Getter
 @Builder
@@ -15,5 +16,7 @@ public class DashboardSalesUser {
     private int rank;
     private int thisMonthCount;
     private int targetDifference;
+
+    @JsonProperty("isPinned")
     private boolean isPinned;
 }
