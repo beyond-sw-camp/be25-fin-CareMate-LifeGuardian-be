@@ -6,19 +6,19 @@
 
 <mapper namespace="com.caremate.lifeguardian.script.mapper.CustomerScriptMapper">
 
-    <!-- 오늘 고객의 액션 아이템 조회 -->
+    <!-- 오늘 고객의 액션 아이템 조회: 잠재고객/통합고객 모두 조회 -->
     <select id="findTodayActionItemIdByCustomerId" resultType="long">
         SELECT id
         FROM daily_action_item
         WHERE customer_id = #{customerId}
-        AND conversion_status_code = '01'
+        AND conversion_status_code IN ('01', '02')
         AND target_date = CURDATE()
         AND is_completed = 0
         ORDER BY priority_score DESC, id DESC
         LIMIT 1
     </select>
 
-    <!-- 오늘 액션에 이미 생성된 스크립트가 있는지 조회 -->
+    <!-- 오늘 액션에 오늘 생성된 스크립트가 있는지 조회 -->
     <select id="findScriptByActionItemId"
             resultType="com.caremate.lifeguardian.script.dto.response.CustomerScriptResponse">
         SELECT
@@ -37,11 +37,13 @@
         ON cc.group_code = 'TRIGGER_TYPE'
         AND cc.code_value = dai.trigger_type_code
         WHERE cs.action_item_id = #{actionItemId}
+        AND cs.created_at >= CURDATE()
+        AND cs.created_at <![CDATA[ < ]]> DATE_ADD(CURDATE(), INTERVAL 1 DAY)
         ORDER BY cs.created_at DESC
         LIMIT 1
     </select>
 
-    <!-- AI 프롬프트 생성을 위한 고객/부모/트리거 정보 조회 -->
+    <!-- AI 프롬프트 생성을 위한 고객/부모/트리거 정보 조회: 잠재고객/통합고객 모두 지원 -->
     <select id="findScriptContext"
             resultType="com.caremate.lifeguardian.script.dto.ScriptContextDto">
         SELECT
@@ -50,21 +52,59 @@
         dai.conversion_status_code AS conversionStatusCode,
         dai.trigger_type_code AS triggerTypeCode,
         cc.code_name AS triggerName,
-        pc.name AS childName,
-        pc.birth_date AS childBirthDate,
-        pc.gender AS childGender,
-        ic.name AS parentName,
-        ic.birth_date AS parentBirthDate,
-        ic.gender AS parentGender
+
+        CASE
+        WHEN dai.conversion_status_code = '01' THEN pc.name
+        WHEN dai.conversion_status_code = '02' THEN child.name
+        END AS childName,
+
+        CASE
+        WHEN dai.conversion_status_code = '01' THEN pc.birth_date
+        WHEN dai.conversion_status_code = '02' THEN child.birth_date
+        END AS childBirthDate,
+
+        CASE
+        WHEN dai.conversion_status_code = '01' THEN pc.gender
+        WHEN dai.conversion_status_code = '02' THEN child.gender
+        END AS childGender,
+
+        CASE
+        WHEN dai.conversion_status_code = '01' THEN parent_from_potential.name
+        WHEN dai.conversion_status_code = '02' THEN parent_from_integrated.name
+        END AS parentName,
+
+        CASE
+        WHEN dai.conversion_status_code = '01' THEN parent_from_potential.birth_date
+        WHEN dai.conversion_status_code = '02' THEN parent_from_integrated.birth_date
+        END AS parentBirthDate,
+
+        CASE
+        WHEN dai.conversion_status_code = '01' THEN parent_from_potential.gender
+        WHEN dai.conversion_status_code = '02' THEN parent_from_integrated.gender
+        END AS parentGender
+
         FROM daily_action_item dai
-        JOIN potential_customer pc
-        ON pc.id = dai.customer_id
-        AND dai.conversion_status_code = '01'
-        JOIN integrated_customer ic
-        ON ic.integrated_customer_id = pc.parent_customer_id
+
+        LEFT JOIN potential_customer pc
+        ON dai.conversion_status_code = '01'
+        AND pc.id = dai.customer_id
+
+        LEFT JOIN integrated_customer parent_from_potential
+        ON dai.conversion_status_code = '01'
+        AND parent_from_potential.integrated_customer_id = pc.parent_customer_id
+
+        LEFT JOIN integrated_customer child
+        ON dai.conversion_status_code = '02'
+        AND child.integrated_customer_id = dai.customer_id
+
+        LEFT JOIN integrated_customer parent_from_integrated
+        ON dai.conversion_status_code = '02'
+        AND parent_from_integrated.integrated_customer_id = child.parent_id
+
         JOIN common_code cc
         ON cc.group_code = 'TRIGGER_TYPE'
         AND cc.code_value = dai.trigger_type_code
+
         WHERE dai.id = #{actionItemId}
     </select>
 
@@ -84,13 +124,22 @@
         )
     </insert>
 
-    <!-- 로그인 영업사원의 고객 권한 확인 -->
+    <!-- 로그인 영업사원의 고객 권한 확인: 잠재고객/통합고객 모두 확인 -->
     <select id="existsCustomerBySalesUserId" resultType="boolean">
-        SELECT EXISTS (
+        SELECT
+        EXISTS (
         SELECT 1
         FROM potential_customer
         WHERE id = #{customerId}
         AND sales_user_id = #{salesUserId}
         )
+        OR
+        EXISTS (
+        SELECT 1
+        FROM integrated_customer
+        WHERE integrated_customer_id = #{customerId}
+        AND sales_user_id = #{salesUserId}
+        )
     </select>
+
 </mapper>
