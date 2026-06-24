@@ -190,6 +190,7 @@
                 pc.name AS customer_name,
                 pc.gender,
                 pc.birth_date,
+                pc.insurance_age_shift_date,
                 pc.sales_user_id,
                 pc.consult_status_code,
                 pc.created_at
@@ -205,6 +206,7 @@
             ic.name AS customer_name,
             ic.gender,
             ic.birth_date,
+            ic.insurance_age_shift_date,
             ic.sales_user_id,
             NULL AS consult_status_code,
             ic.created_at
@@ -318,6 +320,36 @@
         customer_enriched AS (
         SELECT
             cb.*,
+
+            CASE
+                WHEN STR_TO_DATE(
+                    CONCAT(
+                        YEAR(CURDATE()),
+                        '-',
+                        DATE_FORMAT(DATE_ADD(cb.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                    ),
+                    '%Y-%m-%d'
+                ) <![CDATA[<]]> CURDATE()
+                THEN DATE_ADD(
+                    STR_TO_DATE(
+                        CONCAT(
+                            YEAR(CURDATE()),
+                            '-',
+                            DATE_FORMAT(DATE_ADD(cb.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                        ),
+                        '%Y-%m-%d'
+                    ),
+                    INTERVAL 1 YEAR
+                )
+                ELSE STR_TO_DATE(
+                    CONCAT(
+                        YEAR(CURDATE()),
+                        '-',
+                        DATE_FORMAT(DATE_ADD(cb.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                    ),
+                    '%Y-%m-%d'
+                )
+            END AS next_insurance_age_shift_date,
 
             rc.id AS contract_id,
             rc.contract_status_code,
@@ -435,8 +467,12 @@
         </if>
 
         ORDER BY
+            CASE
+                WHEN ce.next_insurance_age_shift_date IS NULL THEN 1
+                ELSE 0
+            END ASC,
+            DATEDIFF(ce.next_insurance_age_shift_date, CURDATE()) ASC,
             sort_rank ASC,
-            ce.three_step_target_date ASC,
             ce.created_at DESC
 
         LIMIT #{request.size}
@@ -449,6 +485,20 @@
             cp.gender AS gender,
             TIMESTAMPDIFF(YEAR, cp.birth_date, CURDATE()) AS age,
             cp.birth_date AS birthDate,
+            cp.next_insurance_age_shift_date AS insuranceAgeShiftDate,
+
+            CASE
+                WHEN cp.next_insurance_age_shift_date IS NULL THEN NULL
+                ELSE DATEDIFF(cp.next_insurance_age_shift_date, CURDATE())
+            END AS ageIncreaseDDay,
+
+            CASE
+                WHEN cp.next_insurance_age_shift_date IS NULL THEN NULL
+                WHEN DATEDIFF(cp.next_insurance_age_shift_date, CURDATE()) = 0 THEN 'D-DAY'
+                WHEN DATEDIFF(cp.next_insurance_age_shift_date, CURDATE()) > 0
+                    THEN CONCAT('D-', DATEDIFF(cp.next_insurance_age_shift_date, CURDATE()))
+                ELSE NULL
+            END AS ageChangeLabel,
 
         cp.customer_type_code AS customerStageCode,
 
@@ -544,8 +594,12 @@
             ON send_code.group_code = 'SEND_STATUS' AND send_code.code_value = cp.send_status_code
 
         ORDER BY
+        CASE
+            WHEN cp.next_insurance_age_shift_date IS NULL THEN 1
+            ELSE 0
+        END ASC,
+        DATEDIFF(cp.next_insurance_age_shift_date, CURDATE()) ASC,
         cp.sort_rank ASC,
-        cp.three_step_target_date ASC,
         cp.created_at DESC
 
     </select>

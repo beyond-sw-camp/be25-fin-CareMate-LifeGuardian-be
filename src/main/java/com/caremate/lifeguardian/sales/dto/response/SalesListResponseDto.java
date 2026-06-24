@@ -23,6 +23,12 @@ public class SalesListResponseDto {
 
     private LocalDate birthDate;
 
+    private LocalDate insuranceAgeShiftDate;
+
+    private Integer ageIncreaseDDay;
+
+    private String ageChangeLabel;
+
     // 고객 단계
     private String customerStageCode;
 
