@@ -190,6 +190,7 @@
                 pc.name AS customer_name,
                 pc.gender,
                 pc.birth_date,
+                pc.insurance_age_shift_date,
                 pc.sales_user_id,
                 pc.consult_status_code,
                 pc.created_at
@@ -205,6 +206,7 @@
             ic.name AS customer_name,
             ic.gender,
             ic.birth_date,
+            ic.insurance_age_shift_date,
             ic.sales_user_id,
             NULL AS consult_status_code,
             ic.created_at
@@ -256,6 +258,25 @@
         WHERE x.rn = 1
         ),
 
+        latest_webform_issuance AS (
+        SELECT *
+        FROM (
+        SELECT
+        wi.*,
+        ROW_NUMBER() OVER (
+        PARTITION BY wi.conversion_status_code, wi.customer_id
+        ORDER BY
+        wi.issued_at DESC,
+        wi.id DESC
+        ) AS rn
+        FROM webform_issuance wi
+        INNER JOIN customer_base cb
+        ON cb.customer_type_code = wi.conversion_status_code
+        AND cb.customer_id = wi.customer_id
+        ) x
+        WHERE x.rn = 1
+        ),
+
         latest_report AS (
         SELECT *
         FROM (
@@ -300,6 +321,36 @@
         SELECT
             cb.*,
 
+            CASE
+                WHEN STR_TO_DATE(
+                    CONCAT(
+                        YEAR(CURDATE()),
+                        '-',
+                        DATE_FORMAT(DATE_ADD(cb.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                    ),
+                    '%Y-%m-%d'
+                ) <![CDATA[<]]> CURDATE()
+                THEN DATE_ADD(
+                    STR_TO_DATE(
+                        CONCAT(
+                            YEAR(CURDATE()),
+                            '-',
+                            DATE_FORMAT(DATE_ADD(cb.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                        ),
+                        '%Y-%m-%d'
+                    ),
+                    INTERVAL 1 YEAR
+                )
+                ELSE STR_TO_DATE(
+                    CONCAT(
+                        YEAR(CURDATE()),
+                        '-',
+                        DATE_FORMAT(DATE_ADD(cb.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                    ),
+                    '%Y-%m-%d'
+                )
+            END AS next_insurance_age_shift_date,
+
             rc.id AS contract_id,
             rc.contract_status_code,
             rc.contract_result_status_code,
@@ -309,6 +360,7 @@
 
             lw.id AS webform_id,
             lw.received_at AS webform_received_at,
+            lwi.webform_status_code,
 
             lr.id AS report_id,
             lr.report_url,
@@ -324,6 +376,8 @@
                 AND rc.integrated_customer_id = cb.customer_id
             LEFT JOIN latest_webform lw
                 ON lw.conversion_status_code = cb.customer_type_code AND lw.customer_id = cb.customer_id
+            LEFT JOIN latest_webform_issuance lwi
+                ON lwi.conversion_status_code = cb.customer_type_code AND lwi.customer_id = cb.customer_id
             LEFT JOIN latest_report lr
                 ON lr.conversion_status_code = cb.customer_type_code AND lr.customer_id = cb.customer_id
             LEFT JOIN representative_three_step rts
@@ -413,8 +467,12 @@
         </if>
 
         ORDER BY
+            CASE
+                WHEN ce.next_insurance_age_shift_date IS NULL THEN 1
+                ELSE 0
+            END ASC,
+            DATEDIFF(ce.next_insurance_age_shift_date, CURDATE()) ASC,
             sort_rank ASC,
-            ce.three_step_target_date ASC,
             ce.created_at DESC
 
         LIMIT #{request.size}
@@ -427,6 +485,20 @@
             cp.gender AS gender,
             TIMESTAMPDIFF(YEAR, cp.birth_date, CURDATE()) AS age,
             cp.birth_date AS birthDate,
+            cp.next_insurance_age_shift_date AS insuranceAgeShiftDate,
+
+            CASE
+                WHEN cp.next_insurance_age_shift_date IS NULL THEN NULL
+                ELSE DATEDIFF(cp.next_insurance_age_shift_date, CURDATE())
+            END AS ageIncreaseDDay,
+
+            CASE
+                WHEN cp.next_insurance_age_shift_date IS NULL THEN NULL
+                WHEN DATEDIFF(cp.next_insurance_age_shift_date, CURDATE()) = 0 THEN 'D-DAY'
+                WHEN DATEDIFF(cp.next_insurance_age_shift_date, CURDATE()) > 0
+                    THEN CONCAT('D-', DATEDIFF(cp.next_insurance_age_shift_date, CURDATE()))
+                ELSE NULL
+            END AS ageChangeLabel,
 
         cp.customer_type_code AS customerStageCode,
 
@@ -461,6 +533,9 @@
         cp.customer_name) AS insuredName,
 
         cp.webform_id AS webFormId,
+
+        COALESCE(cp.webform_status_code, '01') AS webFormStatusCode,
+        COALESCE(webform_code.code_name, '미발송') AS webFormStatusName,
 
         CASE
             WHEN cp.webform_id IS NULL THEN '-'
@@ -512,12 +587,19 @@
         LEFT JOIN common_code contract_code
             ON contract_code.group_code = 'CONTRACT_STATUS' AND contract_code.code_value = cp.contract_status_code
 
+        LEFT JOIN common_code webform_code
+            ON webform_code.group_code = 'WEBFORM_STATUS' AND webform_code.code_value = COALESCE(cp.webform_status_code, '01')
+
         LEFT JOIN common_code send_code
             ON send_code.group_code = 'SEND_STATUS' AND send_code.code_value = cp.send_status_code
 
         ORDER BY
+        CASE
+            WHEN cp.next_insurance_age_shift_date IS NULL THEN 1
+            ELSE 0
+        END ASC,
+        DATEDIFF(cp.next_insurance_age_shift_date, CURDATE()) ASC,
         cp.sort_rank ASC,
-        cp.three_step_target_date ASC,
         cp.created_at DESC
 
     </select>
