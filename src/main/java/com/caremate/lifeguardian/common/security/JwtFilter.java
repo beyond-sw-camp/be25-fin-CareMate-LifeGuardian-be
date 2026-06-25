@@ -31,6 +31,13 @@ public class JwtFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         try {
+            String requestURI = request.getRequestURI();
+
+            if (requestURI.equals("/api/v1/auth/reissue")
+                    || requestURI.equals("/api/v1/auth/login")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             // Authorization 헤더 조회
             String header = request.getHeader("Authorization");
 
