@@ -40,7 +40,35 @@
             WHEN TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) >= 21 THEN '04'
             END AS lifeStageCode,
             lifecycle.code_name AS lifeStageName,
-            pc.insurance_age_shift_date AS insuranceAgeShiftDate,
+            CASE
+                WHEN STR_TO_DATE(
+                    CONCAT(
+                        YEAR(CURDATE()),
+                        '-',
+                        DATE_FORMAT(DATE_ADD(pc.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                    ),
+                    '%Y-%m-%d'
+                ) <![CDATA[<]]> CURDATE()
+                THEN DATE_ADD(
+                    STR_TO_DATE(
+                        CONCAT(
+                            YEAR(CURDATE()),
+                            '-',
+                            DATE_FORMAT(DATE_ADD(pc.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                        ),
+                        '%Y-%m-%d'
+                    ),
+                    INTERVAL 1 YEAR
+                )
+                ELSE STR_TO_DATE(
+                    CONCAT(
+                        YEAR(CURDATE()),
+                        '-',
+                        DATE_FORMAT(DATE_ADD(pc.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                    ),
+                    '%Y-%m-%d'
+                )
+            END AS insuranceAgeShiftDate,
             parent.integrated_customer_id AS parentCustomerId,
             parent.name AS guardianName,
             pc.relationship_code AS relationshipCode,
@@ -91,7 +119,35 @@
                 WHEN TIMESTAMPDIFF(YEAR, child.birth_date, CURDATE()) >= 21 THEN '04'
             END AS lifeStageCode,
             lifecycle.code_name AS lifeStageName,
-            child.insurance_age_shift_date AS insuranceAgeShiftDate,
+            CASE
+                WHEN STR_TO_DATE(
+                    CONCAT(
+                        YEAR(CURDATE()),
+                        '-',
+                        DATE_FORMAT(DATE_ADD(child.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                    ),
+                    '%Y-%m-%d'
+                ) <![CDATA[<]]> CURDATE()
+                THEN DATE_ADD(
+                    STR_TO_DATE(
+                        CONCAT(
+                            YEAR(CURDATE()),
+                            '-',
+                            DATE_FORMAT(DATE_ADD(child.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                        ),
+                        '%Y-%m-%d'
+                    ),
+                    INTERVAL 1 YEAR
+                )
+                ELSE STR_TO_DATE(
+                    CONCAT(
+                        YEAR(CURDATE()),
+                        '-',
+                        DATE_FORMAT(DATE_ADD(child.birth_date, INTERVAL 6 MONTH), '%m-%d')
+                    ),
+                    '%Y-%m-%d'
+                )
+            END AS insuranceAgeShiftDate,
             parent.integrated_customer_id AS parentCustomerId,
             parent.name AS guardianName,
             CASE

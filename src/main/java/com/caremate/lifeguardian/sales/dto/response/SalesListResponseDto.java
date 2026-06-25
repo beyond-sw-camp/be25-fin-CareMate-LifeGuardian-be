@@ -23,6 +23,12 @@ public class SalesListResponseDto {
 
     private LocalDate birthDate;
 
+    private LocalDate insuranceAgeShiftDate;
+
+    private Integer ageIncreaseDDay;
+
+    private String ageChangeLabel;
+
     // 고객 단계
     private String customerStageCode;
 
@@ -52,6 +58,10 @@ public class SalesListResponseDto {
     private String insuredName;
 
     private Long webFormId;
+
+    private String webFormStatusCode;
+
+    private String webFormStatusName;
 
     // 웹폼 회수일
     private String webformReceivedAt;
