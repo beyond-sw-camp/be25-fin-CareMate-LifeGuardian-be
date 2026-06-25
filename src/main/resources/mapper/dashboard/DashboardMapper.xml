@@ -153,6 +153,30 @@
                 ELSE CONCAT('D-', DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()))
             END AS ageChangeLabel,
 
+            CONCAT_WS('|',
+                CASE
+                    WHEN DATE_FORMAT(pc.birth_date, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+                        THEN '오늘 생일'
+                    ELSE NULL
+                END,
+
+                CASE
+                    WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 30
+                        THEN '상령일 D-30'
+                    WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 7
+                        THEN '상령일 D-7'
+                    WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 0
+                        THEN '상령일 D-DAY'
+                    ELSE NULL
+                END,
+
+                CASE
+                    WHEN base.hasThreeStepCaseA = 1
+                        THEN '가족 통합 리모델링'
+                    ELSE NULL
+                END
+            ) AS contactReason,
+
             CASE
                 WHEN base.badgeTriggerTypeCode = '06' THEN '가족 통합 리모델링'
                 WHEN base.badgeTriggerTypeCode = '07' THEN '자녀 보장 점검'
