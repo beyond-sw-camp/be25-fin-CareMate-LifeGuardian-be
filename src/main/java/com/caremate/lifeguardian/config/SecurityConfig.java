@@ -79,7 +79,8 @@ public class SecurityConfig {
                                 "/oauth2/**",                   // OAuth2 리다이렉트 경로
                                 "/v3/api-docs/**",              // Swagger용
                                 "/api/test/**",
-                                "/swagger-ui/**"                // Swagger UI용
+                                "/swagger-ui/**",               // Swagger UI용
+                                "/actuator/health"
                         ).permitAll()
 
 //                        // 인증 필요
