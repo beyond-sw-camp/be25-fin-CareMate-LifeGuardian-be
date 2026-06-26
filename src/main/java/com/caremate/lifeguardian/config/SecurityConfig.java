@@ -55,6 +55,7 @@ public class SecurityConfig {
                         // 인증 없어도 접근 가능
                         .requestMatchers(
                                 "/",
+                                "/health",
                                 "/api/v1/sales-users",
                                 "/api/v1/sales-users/*",
                                 "/api/v1/sales-users/*/status",
