@@ -62,6 +62,15 @@ jwt:
 # 배포시 info 또는 warn으로 수정
 logging:
   level:
-    org.springframework.jdbc: DEBUG
-    com.zaxxer.hikari: DEBUG
-    org.hibernate.SQL: DEBUG
+    root: INFO
+    org.springframework.jdbc: WARN # 배포 시에는 경고/에러만 남기도록 조율
+    com.zaxxer.hikari: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health" # health 엔드포인트만 웹망에 오픈
+  endpoint:
+    health:
+      show-details: never # 서비스 내부 핵심 정보(DB 주소 등)는 숨기고 UP/DOWN 상태만 표기
