@@ -1,5 +1,6 @@
 package com.caremate.lifeguardian.admin.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,5 +17,7 @@ public class DashboardSalesUserInfo {
     int rank;
     int thisMonthCount;
     int targetDifference;
+
+    @JsonProperty("isPinned")
     boolean isPinned;
 }

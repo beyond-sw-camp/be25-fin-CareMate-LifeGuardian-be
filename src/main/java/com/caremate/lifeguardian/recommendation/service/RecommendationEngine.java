@@ -41,7 +41,7 @@ public class RecommendationEngine {
 		WebformResponse webform = recommendationMapper.findLatestWebform(customerId);
 
 		if (webform == null) {
-			throw new BaseException(404, "웹폼 응답이 없습니다.");
+			throw new BaseException(404, "웹폼이 제출되지 않은 고객입니다.");
 		}
 
 		// 추천 대상 고객의 기본 정보를 조회한다.

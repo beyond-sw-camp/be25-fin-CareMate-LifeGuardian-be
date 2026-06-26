@@ -91,34 +91,48 @@
             resultType="com.caremate.lifeguardian.dashboard.dto.response.DashboardAchievementResponse">
 
         SELECT
-            COALESCE(smt.target_contract_count, 0) AS targetContractCount,
+            COALESCE(
+                    (
+                        SELECT smt.target_contract_count
+                        FROM sales_monthly_target smt
+                        WHERE smt.sales_user_id = #{salesUserId}
+                          AND smt.target_year_month = DATE_FORMAT(CURDATE(), '%Y%m')
+                    LIMIT 1
+                ),
+            150
+        ) AS targetContractCount,
 
             (
                 SELECT COUNT(*)
                 FROM contract c
                 WHERE c.sales_user_id = #{salesUserId}
-                    AND c.contract_result_status_code = '02'
-                    AND DATE_FORMAT(c.updated_at, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m')
+                  AND c.contract_result_status_code = '02'
+                  AND DATE_FORMAT(c.updated_at, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m')
             ) AS completedContractCount,
 
-            CASE
-                WHEN COALESCE(smt.target_contract_count, 0) = 0 THEN 0
-                ELSE ROUND(
-                     (
-                         (
-                             SELECT COUNT(*)
-                             FROM contract c
-                             WHERE c.sales_user_id = #{salesUserId}
-                                AND c.contract_result_status_code = '02'
-                                AND DATE_FORMAT(c.updated_at, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m')
-                         ) * 100.0
-                     ) / smt.target_contract_count
-                )
-            END AS achievementRate
+            ROUND(
+                    (
+                        (
+                            SELECT COUNT(*)
+                            FROM contract c
+                            WHERE c.sales_user_id = #{salesUserId}
+                              AND c.contract_result_status_code = '02'
+                              AND DATE_FORMAT(c.updated_at, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m')
+                        ) * 100.0
+                        )
+                        /
+                    COALESCE(
+                            (
+                                SELECT smt.target_contract_count
+                                FROM sales_monthly_target smt
+                                WHERE smt.sales_user_id = #{salesUserId}
+                                  AND smt.target_year_month = DATE_FORMAT(CURDATE(), '%Y%m')
+                            LIMIT 1
+                        ),
+                150
+            )
+        ) AS achievementRate
 
-        FROM sales_monthly_target smt
-        WHERE smt.sales_user_id = #{salesUserId}
-            AND smt.target_year_month = DATE_FORMAT(CURDATE(), '%Y%m')
     </select>
 
     <!-- 오늘 연락 고객 목록 조회 -->
@@ -138,6 +152,30 @@
                 WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 0 THEN 'D-DAY'
                 ELSE CONCAT('D-', DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()))
             END AS ageChangeLabel,
+
+            CONCAT_WS('|',
+                CASE
+                    WHEN DATE_FORMAT(pc.birth_date, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+                        THEN '오늘 생일'
+                    ELSE NULL
+                END,
+
+                CASE
+                    WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 30
+                        THEN '상령일 D-30'
+                    WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 7
+                        THEN '상령일 D-7'
+                    WHEN DATEDIFF(base.nextInsuranceAgeShiftDate, CURDATE()) = 0
+                        THEN '상령일 D-DAY'
+                    ELSE NULL
+                END,
+
+                CASE
+                    WHEN base.hasThreeStepCaseA = 1
+                        THEN '가족 통합 리모델링'
+                    ELSE NULL
+                END
+            ) AS contactReason,
 
             CASE
                 WHEN base.badgeTriggerTypeCode = '06' THEN '가족 통합 리모델링'
