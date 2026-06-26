@@ -19,7 +19,7 @@ spring:
       on-profile: prod
 
   datasource:
-    url: jdbc:mariadb://${DB_HOST}:${DB_PORT}/${DB_NAME}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    url: jdbc:mariadb://${DB_HOST}:${DB_PORT}/${DB_NAME}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&sslMode=trust
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.mariadb.jdbc.Driver
@@ -63,6 +63,10 @@ jwt:
 aws:
   lambda:
     recommend-url: ${AWS_LAMBDA_RECOMMEND_URL:http://localhost:8000/recommend}
+  cloudwatch:
+    region: ap-northeast-2
+    access-key: ""     # ~/.aws/credentials 파일을 읽도록 빈 값 처리
+    secret-key: ""     # ~/.aws/credentials 파일을 읽도록 빈 값 처리
 
 app:
   cors:
