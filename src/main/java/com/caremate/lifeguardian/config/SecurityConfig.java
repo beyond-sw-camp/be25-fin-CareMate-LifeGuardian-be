@@ -62,12 +62,7 @@ public class SecurityConfig {
                                 "/api/v1/sales/performance/*",
                                 "/api/v1/sales-users/*/transfer-customers",
                                 "/api/v1/sales-users/pii-secure",
-                                "/api/v1/branches/*/statistics/annual-contracts",
-                                "/api/v1/branches/*/statistics/monthly-contracts",
-                                "/api/v1/branches/*/statistics/sales-ranking",
-                                "/api/v1/branches/*/statistics/sales-performance/details",
-                                "/api/v1/branches/*/statistics/sales-users/*/performance",
-                                "/api/v1/branches/*/dashboard/sales-users",
+                                "/api/v1/branches/**",
                                 "/api/v1/dashboard/pinned-users/*",
                                 "/api/v1/audit-logs",
                                 "/api/v1/admin/dashboard/esg/environmental-scores",
@@ -83,6 +78,7 @@ public class SecurityConfig {
                                 "/api/v1/webforms/**",
                                 "/oauth2/**",                   // OAuth2 리다이렉트 경로
                                 "/v3/api-docs/**",              // Swagger용
+                                "/api/test/**",
                                 "/swagger-ui/**"                // Swagger UI용
                         ).permitAll()
 
