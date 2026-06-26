@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.caremate.lifeguardian.esg.mapper.EsgSchedularMapper">
+
+    <select id="selectCumulativeMetric" resultType="com.caremate.lifeguardian.admin.domain.InfraEsgCumulativeMetric">
+        SELECT
+            id,
+            total_saved_carbon_kg  AS totalSavedCarbonKg,
+            total_saved_power_kwh  AS totalSavedPowerKwh,
+            total_saved_cost_krw   AS totalSavedCostKrw,
+            updated_at             AS updatedAt
+        FROM infra_esg_cumulative_metric
+        LIMIT 1
+    </select>
+
+    <select id="selectHourlyPowerLogs" resultType="com.caremate.lifeguardian.admin.domain.InfraPowerHourlyLog">
+        SELECT
+            id,
+            log_date                          AS logDate,
+            log_hour                          AS logHour,
+            traditional_estimated_cpu_util    AS traditionalEstimatedCpuUtil,
+            optimized_actual_cpu_util         AS optimizedActualCpuUtil,
+            power_consumption_kw              AS powerConsumptionKw,
+            created_at                        AS createdAt
+        FROM infra_power_hourly_log
+        WHERE log_date = #{logDate}
+        ORDER BY log_hour ASC
+    </select>
+
+    <!-- 배치 재수행 멱등성: 해당 날짜의 기존 로그 삭제 -->
+    <delete id="deleteHourlyPowerLogs">
+        DELETE FROM infra_power_hourly_log
+        WHERE log_date = #{logDate}
+    </delete>
+
+    <!-- 24시간 시간별 전력 분석 로그 벌크 인서트 -->
+    <insert id="insertHourlyPowerLogs">
+        INSERT INTO infra_power_hourly_log (
+            log_date,
+            log_hour,
+            traditional_estimated_cpu_util,
+            optimized_actual_cpu_util,
+            power_consumption_kw,
+            created_at
+        ) VALUES
+        <foreach collection="logs" item="log" separator=",">
+            (
+                #{log.logDate},
+                #{log.logHour},
+                #{log.traditionalEstimatedCpuUtil},
+                #{log.optimizedActualCpuUtil},
+                #{log.powerConsumptionKw},
+                NOW()
+            )
+        </foreach>
+    </insert>
+
+    <!-- 누적 ESG 메트릭(id=1) 가산 업데이트 (없으면 신규 삽입) -->
+    <insert id="upsertCumulativeMetric">
+        INSERT INTO infra_esg_cumulative_metric (
+            id,
+            total_saved_carbon_kg,
+            total_saved_power_kwh,
+            total_saved_cost_krw,
+            updated_at
+        ) VALUES (
+            1,
+            #{carbon},
+            #{power},
+            #{cost},
+            NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            total_saved_carbon_kg = total_saved_carbon_kg + #{carbon},
+            total_saved_power_kwh = total_saved_power_kwh + #{power},
+            total_saved_cost_krw  = total_saved_cost_krw  + #{cost},
+            updated_at            = NOW()
+    </insert>
+
+</mapper>
