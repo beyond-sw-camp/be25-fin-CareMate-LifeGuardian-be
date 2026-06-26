@@ -90,4 +90,6 @@ public class ContactCustomerResponse {
 
     @Schema(description = "정렬 우선순위", example = "100")
     private Integer priorityScore;
+
+    private String contactReason;
 }

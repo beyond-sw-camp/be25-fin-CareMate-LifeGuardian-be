@@ -72,6 +72,12 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGIN}
 
+  esg:
+    batch:
+      enabled: true   # 자동 실행 비활성화 (로컬 기본)
+    cloudwatch:
+      enabled: true
+
   security:
     rrn-pepper: ${RRN_PEPPER}
 

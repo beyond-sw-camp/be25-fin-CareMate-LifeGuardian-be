@@ -6,6 +6,36 @@
 
 <mapper namespace="com.caremate.lifeguardian.recommendation.mapper.RecommendationMapper">
 
+    <select id="existsPotentialCustomer" resultType="boolean">
+        SELECT EXISTS (
+        SELECT 1
+        FROM potential_customer
+        WHERE id = #{customerId}
+        )
+    </select>
+
+    <select id="existsIntegratedCustomer" resultType="boolean">
+        SELECT EXISTS (
+        SELECT 1
+        FROM integrated_customer
+        WHERE integrated_customer_id = #{customerId}
+        )
+    </select>
+
+    <select id="countPotentialCustomerBySalesUser" resultType="int">
+        SELECT COUNT(*)
+        FROM potential_customer
+        WHERE id = #{customerId}
+        AND sales_user_id = #{salesUserId}
+    </select>
+
+    <select id="countIntegratedCustomerBySalesUser" resultType="int">
+        SELECT COUNT(*)
+        FROM integrated_customer
+        WHERE integrated_customer_id = #{customerId}
+        AND sales_user_id = #{salesUserId}
+    </select>
+
     <select id="countCustomerBySalesUser" resultType="java.lang.Integer">
         SELECT COUNT(*)
         FROM potential_customer
