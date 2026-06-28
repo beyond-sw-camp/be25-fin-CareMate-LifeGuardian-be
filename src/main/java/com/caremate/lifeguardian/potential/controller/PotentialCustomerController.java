@@ -52,6 +52,35 @@ public class PotentialCustomerController {
     }
 
     /**
+     * 담당 부모 통합고객 목록 조회 API
+     *
+     * 기능:
+     * - 로그인한 영업사원이 담당하는 부모 통합고객 목록을 조회한다.
+     *
+     * 처리 흐름:
+     * - SecurityUtil에서 현재 로그인한 영업사원 ID를 가져온다.
+     * - Service에서 부모 통합고객 목록을 조회한다.
+     * - 조회 결과를 반환한다.
+     *
+     * @return 담당 부모 통합고객 목록
+     */
+    @Operation(summary = "담당 부모 통합고객 목록 조회", description = "로그인한 영업사원이 담당하는 부모 통합고객 목록을 조회합니다.")
+    @GetMapping("/parents")
+    public ApiResponse<List<ParentCustomerSearchResponse>> getParentCustomers() {
+
+        Long salesUserId = SecurityUtil.getCurrentUserId();
+
+        List<ParentCustomerSearchResponse> response =
+                potentialCustomerService.getParentCustomers(salesUserId);
+
+        return ApiResponse.success(
+                200,
+                "담당 부모 통합고객 목록 조회에 성공했습니다.",
+                response
+        );
+    }
+
+    /**
      * 부모 통합고객 조회 API
      *
      * 기능:

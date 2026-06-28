@@ -19,6 +19,11 @@ public interface PotentialCustomerMapper {
             @Param("salesUserId") Long salesUserId
     );
 
+    // 담당 부모 통합고객 목록 조회
+    List<ParentCustomerSearchResponse> findParentCustomersBySalesUserId(
+            @Param("salesUserId") Long salesUserId
+    );
+
     // 부모 통합고객 조회
     ParentCustomerSearchResponse findParentCustomer(
             @Param("request") ParentCustomerSearchRequest request,

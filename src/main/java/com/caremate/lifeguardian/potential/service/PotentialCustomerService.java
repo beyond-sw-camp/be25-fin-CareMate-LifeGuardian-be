@@ -17,6 +17,14 @@ public interface PotentialCustomerService {
     List<PotentialCustomerListResponse> getPotentialCustomers(Long salesUSerId);
 
     /**
+     * 담당 부모 통합고객 목록 조회
+     *
+     * @param salesUserId 로그인한 영업사원 ID
+     * @return 담당 부모 통합고객 목록
+     */
+    List<ParentCustomerSearchResponse> getParentCustomers(Long salesUserId);
+
+    /**
      * 부모 통합고개 조회
      *
      * 입력한 부모 정보와 일치하는 통합고객 조회

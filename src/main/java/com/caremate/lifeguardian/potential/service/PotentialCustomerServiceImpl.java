@@ -42,6 +42,20 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
     }
 
     /**
+     * 담당 부모 통합고객 목록 조회 실제 구현
+     *
+     * 처리 흐름:
+     * - Controller에서 로그인한 영업사원 ID를 전달받는다.
+     * - Mapper를 호출하여 담당 부모 통합고객 목록을 조회한다.
+     * - 조회 결과를 Controller로 반환한다.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<ParentCustomerSearchResponse> getParentCustomers(Long salesUserId) {
+        return potentialCustomerMapper.findParentCustomersBySalesUserId(salesUserId);
+    }
+
+    /**
      * 부모 통합고객 조회 실제 구현
      *
      * 처리 흐름:
