@@ -2,10 +2,12 @@ package com.caremate.lifeguardian.potential.service;
 
 import com.caremate.lifeguardian.potential.dto.request.ParentCustomerSearchRequest;
 import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerCreateRequest;
+import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerUpdateRequest;
 import com.caremate.lifeguardian.potential.dto.response.ParentCustomerSearchResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerCreateResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerDeleteResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerListResponse;
+import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerDetailResponse;
 import java.util.List;
 
 public interface PotentialCustomerService {
@@ -17,7 +19,42 @@ public interface PotentialCustomerService {
     List<PotentialCustomerListResponse> getPotentialCustomers(Long salesUSerId);
 
     /**
-     * 담당 부모 통합고객 목록 조회
+     * 잠재고객 상세 조회
+     *
+     * 기능:
+     * - 잠재고객 ID를 기준으로 부모 정보와 잠재고객 정보를 함께 조회한다.
+     * - 로그인한 영업사원의 담당 잠재고객만 조회할 수 있다.
+     *
+     * @param potentialCustomerId 잠재고객 ID
+     * @param salesUserId 로그인한 영업사원 ID
+     * @return 잠재고객 상세 정보
+     */
+    PotentialCustomerDetailResponse getPotentialCustomerDetail(
+            Long potentialCustomerId,
+            Long salesUserId
+    );
+
+    /**
+     * 잠재고객 수정
+     *
+     * 기능:
+     * - 잠재고객의 자녀 정보를 수정한다.
+     * - 부모 정보는 수정하지 않는다.
+     * - 로그인한 영업사원의 담당 잠재고객만 수정할 수 있다.
+     *
+     * @param potentialCustomerId 잠재고객 ID
+     * @param request 수정 요청 정보
+     * @param salesUserId 로그인한 영업사원 ID
+     * @return 수정된 잠재고객 상세 정보
+     */
+    PotentialCustomerDetailResponse updatePotentialCustomer(
+            Long potentialCustomerId,
+            PotentialCustomerUpdateRequest request,
+            Long salesUserId
+    );
+
+    /**
+     * 부모 통합고객 목록 조회
      *
      * @param salesUserId 로그인한 영업사원 ID
      * @return 담당 부모 통합고객 목록

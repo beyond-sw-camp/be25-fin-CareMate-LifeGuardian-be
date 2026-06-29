@@ -5,9 +5,11 @@ import com.caremate.lifeguardian.common.security.RrnHashUtil;
 import com.caremate.lifeguardian.potential.domain.PotentialCustomer;
 import com.caremate.lifeguardian.potential.dto.request.ParentCustomerSearchRequest;
 import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerCreateRequest;
+import com.caremate.lifeguardian.potential.dto.request.PotentialCustomerUpdateRequest;
 import com.caremate.lifeguardian.potential.dto.response.ParentCustomerSearchResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerCreateResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerDeleteResponse;
+import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerDetailResponse;
 import com.caremate.lifeguardian.potential.dto.response.PotentialCustomerListResponse;
 import com.caremate.lifeguardian.potential.mapper.PotentialCustomerMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -42,7 +44,116 @@ public class PotentialCustomerServiceImpl implements PotentialCustomerService {
     }
 
     /**
-     * 담당 부모 통합고객 목록 조회 실제 구현
+     * 잠재고객 상세 조회 실제 구현
+     *
+     * 처리 흐름:
+     * - 잠재고객이 존재하는지 확인한다.
+     * - 로그인한 영업사원의 담당 잠재고객인지 확인한다.
+     * - 부모 정보와 잠재고객 정보를 함께 조회한다.
+     * - 조회 결과를 반환한다.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public PotentialCustomerDetailResponse getPotentialCustomerDetail(
+            Long potentialCustomerId,
+            Long salesUserId
+    ) {
+
+        // 1. 잠재고객 존재 여부 확인
+        PotentialCustomer potentialCustomer =
+                potentialCustomerMapper.findPotentialCustomerById(potentialCustomerId);
+
+        if (potentialCustomer == null) {
+            throw new BaseException(404, "해당 잠재고객 정보를 찾을 수 없습니다.");
+        }
+
+        // 2. 담당 영업사원 권한 확인
+        boolean hasPermission =
+                potentialCustomerMapper.existsPotentialCustomerByIdAndSalesUserId(
+                        potentialCustomerId,
+                        salesUserId
+                );
+
+        if (!hasPermission) {
+            throw new BaseException(403, "해당 잠재고객을 조회할 권한이 없습니다.");
+        }
+
+        // 3. 부모 정보 + 잠재고객 정보 조회
+        PotentialCustomerDetailResponse response =
+                potentialCustomerMapper.findPotentialCustomerDetail(
+                        potentialCustomerId
+                );
+
+        if (response == null) {
+            throw new BaseException(404, "잠재고객 상세 정보를 찾을 수 없습니다.");
+        }
+
+        // 4. 조회 결과 반환
+        return response;
+    }
+
+    /**
+     * 잠재고객 수정 실제 구현
+     *
+     * 처리 흐름:
+     * - 잠재고객이 존재하는지 확인한다.
+     * - 로그인한 영업사원의 담당 잠재고객인지 확인한다.
+     * - 잠재고객의 자녀 정보를 수정한다.
+     * - 수정된 잠재고객 상세 정보를 다시 조회하여 반환한다.
+     */
+    @Override
+    @Transactional
+    public PotentialCustomerDetailResponse updatePotentialCustomer(
+            Long potentialCustomerId,
+            PotentialCustomerUpdateRequest request,
+            Long salesUserId
+    ) {
+
+        // 1. 잠재고객 존재 여부 확인
+        PotentialCustomer potentialCustomer =
+                potentialCustomerMapper.findPotentialCustomerById(potentialCustomerId);
+
+        if (potentialCustomer == null) {
+            throw new BaseException(404, "해당 잠재고객 정보를 찾을 수 없습니다.");
+        }
+
+        // 2. 로그인한 영업사원의 담당 고객인지 확인
+        boolean hasPermission =
+                potentialCustomerMapper.existsPotentialCustomerByIdAndSalesUserId(
+                        potentialCustomerId,
+                        salesUserId
+                );
+
+        if (!hasPermission) {
+            throw new BaseException(403, "해당 잠재고객을 수정할 권한이 없습니다.");
+        }
+
+        // 3. 잠재고객 수정
+        int updatedCount =
+                potentialCustomerMapper.updatePotentialCustomer(
+                        potentialCustomerId,
+                        request
+                );
+
+        if (updatedCount != 1) {
+            throw new BaseException(500, "시스템 오류로 인해 잠재고객 정보를 수정하지 못했습니다. 관리자에게 문의하세요.");
+        }
+
+        // 4. 수정된 상세 정보 다시 조회 후 반환
+        PotentialCustomerDetailResponse response =
+                potentialCustomerMapper.findPotentialCustomerDetail(
+                        potentialCustomerId
+                );
+
+        if (response == null) {
+            throw new BaseException(404, "수정된 잠재고객 상세 정보를 찾을 수 없습니다.");
+        }
+
+        return response;
+    }
+
+    /**
+     * 부모 통합고객 목록 조회 실제 구현
      *
      * 처리 흐름:
      * - Controller에서 로그인한 영업사원 ID를 전달받는다.

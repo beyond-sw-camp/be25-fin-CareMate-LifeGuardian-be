@@ -40,10 +40,69 @@
         ORDER BY
             pc.is_active ASC,     -- 졸업 고객 맨 아래
             pc.created_at DESC    -- 최신 등록순
-
     </select>
 
-    <!-- 담당 부모 통합고객 목록 조회
+    <!-- 잠재고객 상세 조회
+    조회 대상:
+    - 잠재고객 ID 기준 단건 조회
+    - 부모 통합고객 정보와 잠재고객 정보를 함께 조회
+    -->
+    <select id="findPotentialCustomerDetail"
+            resultType="com.caremate.lifeguardian.potential.dto.response.PotentialCustomerDetailResponse">
+
+        SELECT
+            pc.id AS potentialCustomerId,
+
+            ic.integrated_customer_id AS parentCustomerId,
+            ic.name AS parentName,
+            ic.birth_date AS parentBirthDate,
+            ic.phone AS parentPhone,
+            ic.address AS parentAddress,
+
+            pc.relationship_code AS relationshipCode,
+            relationship.code_name AS relationshipName,
+
+            pc.name AS name,
+            pc.gender AS gender,
+            pc.birth_date AS birthDate,
+            TIMESTAMPDIFF(YEAR, pc.birth_date, CURDATE()) AS age,
+
+            pc.consult_status_code AS consultStatusCode,
+            consult.code_name AS consultStatusName,
+            pc.conversion_status_code AS conversionStatusCode,
+            conversion.code_name AS conversionStatusName
+
+        FROM potential_customer pc
+
+        INNER JOIN integrated_customer ic
+            ON pc.parent_customer_id = ic.integrated_customer_id
+        INNER JOIN common_code relationship
+            ON relationship.group_code = 'RELATIONSHIP'
+            AND relationship.code_value = pc.relationship_code
+        INNER JOIN common_code consult
+            ON consult.group_code = 'CONSULT_STATUS'
+            AND consult.code_value = pc.consult_status_code
+        INNER JOIN common_code conversion
+            ON conversion.group_code = 'CONVERSION_STATUS'
+            AND conversion.code_value = pc.conversion_status_code
+
+        WHERE pc.id = #{potentialCustomerId}
+    </select>
+
+    <!-- 잠재고객 수정 -->
+    <update id="updatePotentialCustomer">
+
+        UPDATE potential_customer
+        SET
+            name = #{request.name},
+            gender = #{request.gender},
+            birth_date = #{request.birthDate},
+            updated_at = NOW()
+
+        WHERE id = #{potentialCustomerId}
+    </update>
+
+    <!-- 부모 통합고객 목록 조회
     조회 대상
     - 로그인한 영업사원이 담당하는 부모 통합고객
     - parent_id가 NULL인 고객만 조회
